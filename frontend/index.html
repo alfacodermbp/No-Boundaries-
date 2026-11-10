@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#050406">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="/static/manifest.json">
+  <title>EVERYTHING FREE — Universal Media & Audio Extraction Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <!-- Top Scroll Progress Line -->
+  <div id="scroll-progress-bar"></div>
+
+  <!-- Background Scanlines & Particle Embers Canvas -->
+  <canvas id="ambient-canvas"></canvas>
+  <div class="scanlines-overlay"></div>
+  <div class="ambient-glow-mesh"></div>
+
+  <!-- Header Navigation -->
+  <header class="site-header">
+    <div class="container header-inner">
+      <a href="/" class="brand-link">
+        <div class="brand-icon-box">E</div>
+        <div class="brand-title-wrap">
+          <span class="brand-name">Everything Free</span>
+          <span class="brand-tagline-sub">Universal Media Suite</span>
+        </div>
+      </a>
+
+      <!-- Prominent Highlighted Nav Tabs -->
+      <nav class="nav-pills" role="tablist">
+        <button class="nav-tab-btn active" data-tab="video">
+          <span class="tab-badge-num">01</span>
+          <span class="tab-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+          </span>
+          <span class="tab-label">Video</span>
+        </button>
+        <button class="nav-tab-btn" data-tab="audio">
+          <span class="tab-badge-num">02</span>
+          <span class="tab-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+          </span>
+          <span class="tab-label">Audio & Songs</span>
+        </button>
+        <button class="nav-tab-btn" data-tab="playlist">
+          <span class="tab-badge-num">03</span>
+          <span class="tab-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          </span>
+          <span class="tab-label">Playlist Batch</span>
+        </button>
+      </nav>
+
+      <div class="header-engine-spec">
+        <span class="engine-tag">4K RAW</span>
+        <span class="engine-meta">320K AUDIO</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+    
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <h1 class="hero-title">
+        Everything <span class="crimson-text">Free.</span>
+      </h1>
+      <p class="hero-subtitle-quote">
+        Direct 4K video muxing, master 320kbps audio extraction, and full playlist curation straight to your local drive.
+        <strong>Universal support across 1,000+ platforms with zero sign-in.</strong>
+      </p>
+
+      <!-- Platform Strip -->
+      <div class="platform-strip">
+        <span class="plat-chip">YouTube 4K</span>
+        <span class="plat-chip">Instagram Reels</span>
+        <span class="plat-chip">Twitter / X</span>
+        <span class="plat-chip">TikTok HD</span>
+        <span class="plat-chip">SoundCloud</span>
+        <span class="plat-chip">Reddit Clips</span>
+        <span class="plat-chip">Snapchat</span>
+        <span class="plat-chip">Facebook</span>
+        <span class="plat-chip">Vimeo</span>
+        <span class="plat-chip">+1000 SITES</span>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAB 1: VIDEO DOWNLOADER
+    ======================================================== -->
+    <section id="view-video" class="tab-view-content">
+      <div class="console-wrapper">
+        <div class="console-laser-line"></div>
+        <div class="input-bar-group">
+          <div class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          </div>
+          <input type="text" id="video-url-input" class="console-input" placeholder="Paste video link (YouTube, Instagram, Twitter/X, TikTok, Reddit, etc.)...">
+          <button class="btn-paste" data-target="video-url-input">PASTE</button>
+          <button id="btn-analyze-video" class="btn-action-crimson" onclick="VideoDownloader.analyze()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            Analyze Link
+          </button>
+        </div>
+      </div>
+
+      <!-- Video Analysis Result Card -->
+      <div id="video-result-card" class="media-result-card">
+        <div class="media-preview-header">
+          <div class="thumb-container">
+            <img id="video-thumb" class="thumb-img" src="" alt="Video thumbnail">
+            <span id="video-duration" class="thumb-duration">00:00</span>
+          </div>
+          <div class="media-info">
+            <span id="video-platform" class="media-platform-tag">WEB VIDEO // 60FPS</span>
+            <h2 id="video-title" class="media-title">Video Title</h2>
+            <div class="media-meta">
+              <span>CREATOR: <strong id="video-uploader" style="color: #ffffff;">Artist</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="format-grid-header">
+          <span>AVAILABLE RESOLUTIONS & DATA USAGE</span>
+          <span style="color: var(--text-dim);">FFMPEG STREAM MUXER</span>
+        </div>
+        <div id="video-formats-grid" class="format-grid"></div>
+
+        <!-- Celestial 3D Planet Progress Panel -->
+        <div id="video-download-progress" class="download-progress-panel">
+          <div class="celestial-progress-grid">
+            <div class="planet-stage-box">
+              <div class="planet-orbit-ring"><div class="planet-satellite"></div></div>
+              <div id="video-planet-sphere" class="planet-sphere stage-moon"></div>
+            </div>
+            <div class="progress-details-col">
+              <div class="progress-header-row">
+                <div class="progress-status-wrap">
+                  <span id="video-progress-status" class="progress-status-badge">DOWNLOADING</span>
+                  <div class="progress-ctrl-btns">
+                    <button id="video-btn-pause" class="btn-job-action btn-job-pause" onclick="VideoDownloader.togglePause()">
+                      <svg class="icon-pause" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                      <svg class="icon-play" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                      <span class="btn-text">PAUSE</span>
+                    </button>
+                    <button id="video-btn-cancel" class="btn-job-action btn-job-cancel" onclick="VideoDownloader.cancel()">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      <span>CANCEL</span>
+                    </button>
+                  </div>
+                </div>
+                <span id="video-progress-pct" class="progress-pct-huge">0%</span>
+              </div>
+              <div class="progress-bar-track">
+                <div id="video-progress-fill" class="progress-bar-fill"></div>
+              </div>
+              <div class="progress-meta-row">
+                <span id="video-progress-speed">Streaming raw chunks...</span>
+                <span id="video-planet-name" class="planet-name-badge">PHOBOS // SECTOR 1</span>
+                <span id="video-progress-meta">Calculating ETA...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAB 2: SONG & AUDIO HUB (SEARCH + PASTE LINK)
+    ======================================================== -->
+    <section id="view-audio" class="tab-view-content" style="display: none;">
+      <div class="console-wrapper">
+        <div class="console-laser-line"></div>
+        <div class="input-bar-group">
+          <div class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </div>
+          <input type="text" id="audio-search-input" class="console-input" placeholder="Search famous song title, artist, OR paste music video link...">
+          <button class="btn-paste" data-target="audio-search-input">PASTE</button>
+          <button id="btn-search-audio" class="btn-action-crimson" onclick="AudioHub.searchOrAnalyze()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            Search / Fetch
+          </button>
+        </div>
+
+        <!-- Quick Trending Suggestions Chips -->
+        <div class="search-chips">
+          <span class="chip-label">QUICK SEARCH:</span>
+          <button class="chip-btn" data-query="The Weeknd Starboy">Starboy</button>
+          <button class="chip-btn" data-query="Coldplay Viva La Vida">Viva La Vida</button>
+          <button class="chip-btn" data-query="Dua Lipa Houdini">Houdini</button>
+          <button class="chip-btn" data-query="Ed Sheeran Shape of You">Shape of You</button>
+          <button class="chip-btn" data-query="Arijit Singh Kesariya">Kesariya</button>
+          <button class="chip-btn" data-query="Drake One Dance">One Dance</button>
+        </div>
+      </div>
+
+      <!-- Direct Audio Analysis Card -->
+      <div id="audio-direct-card" class="media-result-card">
+        <div class="media-preview-header">
+          <div class="thumb-container">
+            <img id="audio-thumb" class="thumb-img" src="" alt="Audio artwork">
+            <span id="audio-duration" class="thumb-duration">00:00</span>
+          </div>
+          <div class="media-info">
+            <span class="media-platform-tag">HIGH RES MASTER // MUTAGEN EMBEDDED</span>
+            <h2 id="audio-title" class="media-title">Track Title</h2>
+            <div class="media-meta">
+              <span>ARTIST: <strong id="audio-uploader" style="color: #ffffff;">Artist</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="format-grid-header">
+          <span>BITRATE & AUDIO TIERS</span>
+          <span style="color: var(--text-dim);">320KBPS LAME ENCODER</span>
+        </div>
+        <div id="audio-formats-grid" class="format-grid"></div>
+      </div>
+
+      <!-- Search Results Grid -->
+      <div id="audio-results-container" class="song-results-grid"></div>
+
+      <!-- Celestial 3D Planet Progress Panel (Audio) -->
+      <div id="audio-download-progress" class="download-progress-panel">
+        <div class="celestial-progress-grid">
+          <div class="planet-stage-box">
+            <div class="planet-orbit-ring"><div class="planet-satellite"></div></div>
+            <div id="audio-planet-sphere" class="planet-sphere stage-moon"></div>
+          </div>
+          <div class="progress-details-col">
+            <div class="progress-header-row">
+              <div class="progress-status-wrap">
+                <span id="audio-progress-status" class="progress-status-badge">EXTRACTING</span>
+                <div class="progress-ctrl-btns">
+                  <button id="audio-btn-pause" class="btn-job-action btn-job-pause" onclick="AudioHub.togglePause()">
+                    <svg class="icon-pause" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                    <svg class="icon-play" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    <span class="btn-text">PAUSE</span>
+                  </button>
+                  <button id="audio-btn-cancel" class="btn-job-action btn-job-cancel" onclick="AudioHub.cancel()">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <span>CANCEL</span>
+                  </button>
+                </div>
+              </div>
+              <span id="audio-progress-pct" class="progress-pct-huge">0%</span>
+            </div>
+            <div class="progress-bar-track">
+              <div id="audio-progress-fill" class="progress-bar-fill"></div>
+            </div>
+            <div class="progress-meta-row">
+              <span id="audio-progress-speed">Streaming audio...</span>
+              <span id="audio-planet-name" class="planet-name-badge">PHOBOS // SECTOR 1</span>
+              <span id="audio-progress-meta">Embedding ID3 Artwork...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         TAB 3: PLAYLIST & BATCH STUDIO (WITH CHECKBOXES)
+    ======================================================== -->
+    <section id="view-playlist" class="tab-view-content" style="display: none;">
+      <div class="console-wrapper">
+        <div class="console-laser-line"></div>
+        <div class="input-bar-group">
+          <div class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+          </div>
+          <input type="text" id="playlist-url-input" class="console-input" placeholder="Paste full playlist link (YouTube playlist, SoundCloud album, etc.)...">
+          <button class="btn-paste" data-target="playlist-url-input">PASTE</button>
+          <button id="btn-analyze-playlist" class="btn-action-crimson" onclick="PlaylistStudio.analyze()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            Fetch Playlist
+          </button>
+        </div>
+      </div>
+
+      <!-- Playlist Curation Dashboard -->
+      <div id="playlist-dashboard" class="media-result-card">
+        <div style="margin-bottom: 1.25rem;">
+          <span class="media-platform-tag">PLAYLIST CULLING // BATCH STUDIO</span>
+          <h2 id="playlist-title" class="media-title">Playlist Title</h2>
+          <div id="playlist-curator" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Curated Collection</div>
+        </div>
+
+        <!-- Interactive Playlist Toolbar -->
+        <div class="playlist-toolbar">
+          <div class="playlist-select-actions">
+            <button class="btn-tool" onclick="PlaylistStudio.selectAll()">✓ SELECT ALL</button>
+            <button class="btn-tool" onclick="PlaylistStudio.deselectAll()">✕ DESELECT ALL</button>
+            <div class="playlist-counter">
+              SELECTED: <span id="playlist-selected-count">0</span> / <span id="playlist-total-count">0</span> TRACKS
+              (<span id="playlist-est-size">~0 MB</span>)
+            </div>
+          </div>
+
+          <div class="playlist-download-action">
+            <select id="playlist-quality-select" class="quality-select">
+              <option value="320k">320 kbps MP3 (Master)</option>
+              <option value="256k">256 kbps MP3 (Studio)</option>
+              <option value="192k">192 kbps MP3 (Standard)</option>
+            </select>
+            <button id="btn-download-playlist-batch" class="btn-download-batch" onclick="PlaylistStudio.startBatchDownload()">
+              DOWNLOAD SELECTED (ZIP)
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Tracks List with Checkboxes -->
+        <div id="playlist-tracks-list" class="tracks-container"></div>
+
+        <!-- Celestial 3D Planet Progress Panel (Playlist) -->
+        <div id="playlist-download-progress" class="download-progress-panel">
+          <div class="celestial-progress-grid">
+            <div class="planet-stage-box">
+              <div class="planet-orbit-ring"><div class="planet-satellite"></div></div>
+              <div id="playlist-planet-sphere" class="planet-sphere stage-moon"></div>
+            </div>
+            <div class="progress-details-col">
+              <div class="progress-header-row">
+                <div class="progress-status-wrap">
+                  <span id="playlist-progress-status" class="progress-status-badge">BATCH DOWNLOADING</span>
+                  <div class="progress-ctrl-btns">
+                    <button id="playlist-btn-pause" class="btn-job-action btn-job-pause" onclick="PlaylistStudio.togglePause()">
+                      <svg class="icon-pause" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                      <svg class="icon-play" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                      <span class="btn-text">PAUSE</span>
+                    </button>
+                    <button id="playlist-btn-cancel" class="btn-job-action btn-job-cancel" onclick="PlaylistStudio.cancel()">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      <span>CANCEL</span>
+                    </button>
+                  </div>
+                </div>
+                <span id="playlist-progress-pct" class="progress-pct-huge">0%</span>
+              </div>
+              <div class="progress-bar-track">
+                <div id="playlist-progress-fill" class="progress-bar-fill"></div>
+              </div>
+              <div class="progress-meta-row">
+                <span id="playlist-progress-speed">Batch queued...</span>
+                <span id="playlist-planet-name" class="planet-name-badge">PHOBOS // SECTOR 1</span>
+                <span id="playlist-progress-meta">Packaging ZIP archive...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================================
+         POWERS & CAPABILITIES (NO JUNK TEXT, PURE VALUE)
+    ======================================================== -->
+    <section class="powers-section">
+      <div class="powers-header">
+        <h2 class="powers-title">Capabilities & Powers</h2>
+        <div class="powers-subtitle">High-Fidelity Media Architecture</div>
+      </div>
+
+      <div class="powers-grid">
+        <div class="power-card">
+          <span class="power-code">// 01_VIDEO</span>
+          <h3 class="power-card-title">4K 60FPS Raw Mux</h3>
+          <p class="power-card-desc">
+            Direct DASH stream muxing up to 4K 2160p with FFmpeg 9.0. YouTube, Instagram Reels, Twitter/X, TikTok, Reddit, Vimeo.
+          </p>
+        </div>
+
+        <div class="power-card">
+          <span class="power-code">// 02_AUDIO</span>
+          <h3 class="power-card-title">320k Master Audio</h3>
+          <p class="power-card-desc">
+            Lossless source stream extraction with LAME transcode to 320 kbps MP3. Auto-embeds high-res album art and ID3 metadata.
+          </p>
+        </div>
+
+        <div class="power-card">
+          <span class="power-code">// 03_CURATION</span>
+          <h3 class="power-card-title">Interactive Culling</h3>
+          <p class="power-card-desc">
+            Inspect entire playlists with individual checkboxes. Remove unwanted songs, keep what you love, and bundle as a clean ZIP.
+          </p>
+        </div>
+
+        <div class="power-card">
+          <span class="power-code">// 04_PRIVACY</span>
+          <h3 class="power-card-title">Direct Local Storage</h3>
+          <p class="power-card-desc">
+            No accounts. No telemetry cookies. Zero database logging. Streams directly to your local computer's download folder.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-quote">
+        EVERYTHING FREE // <span>UNIVERSAL MEDIA EXTRACTION STUDIO</span>
+      </div>
+      <div class="footer-tech">
+        FFMPEG 9.0 // YT-DLP CORE // REFINED AUDIO ENGINE // ZERO TELEMETRY
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/video.js"></script>
+  <script src="/static/js/audio.js"></script>
+  <script src="/static/js/playlist.js"></script>
+</body>
+</html>

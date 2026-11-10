@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.git
+.gitignore
+.env
+.env.*
+downloads/*
+!downloads/.gitkeep
+temp/*
+!temp/.gitkeep
+.vercel
+node_modules
+*.md
