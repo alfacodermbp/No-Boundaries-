@@ -371,14 +371,39 @@ async def system_status():
         "storage": "Direct-to-Client (Zero Telemetry)"
     }
 
-# Mount static frontend directory
+# Mount static frontend directory (supports both frontend/ and public/ deployments)
+PUBLIC_DIR = Path(__file__).resolve().parent.parent / "public"
+
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
+elif (PUBLIC_DIR / "static").exists():
+    app.mount("/static", StaticFiles(directory=str(PUBLIC_DIR / "static")), name="static")
+elif PUBLIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(PUBLIC_DIR)), name="static")
 
 @app.get("/")
+@app.get("/index.html")
+@app.get("/frontend/index.html")
 async def root():
-    index_file = FRONTEND_DIR / "index.html"
-    if index_file.exists():
-        return FileResponse(index_file)
+    candidates = [
+        FRONTEND_DIR / "index.html",
+        PUBLIC_DIR / "index.html",
+        PUBLIC_DIR / "static" / "index.html"
+    ]
+    for c in candidates:
+        if c.exists():
+            return FileResponse(c)
     return {"message": "Everything Free Media Studio API is running."}
+
+@app.get("/frontend/{file_path:path}")
+async def serve_frontend_fallback(file_path: str):
+    candidates = [
+        FRONTEND_DIR / file_path,
+        PUBLIC_DIR / file_path,
+        PUBLIC_DIR / "static" / file_path
+    ]
+    for c in candidates:
+        if c.exists() and c.is_file():
+            return FileResponse(c)
+    raise HTTPException(status_code=404, detail="File not found")
 

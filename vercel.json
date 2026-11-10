@@ -19,8 +19,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/", "destination": "/frontend/index.html" },
-    { "source": "/static/(.*)", "destination": "/frontend/$1" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
   ]
 }
