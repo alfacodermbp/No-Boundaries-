@@ -5,18 +5,13 @@
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#050406",
-  "theme_color": "#ff2a4b",
+  "background_color": "#0B0D10",
+  "theme_color": "#0B0D10",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23050406'/><rect x='10' y='10' width='80' height='80' rx='16' fill='%23ff2a4b'/><text x='50' y='68' font-size='52' font-family='sans-serif' font-weight='900' fill='%23050406' text-anchor='middle'>E</text></svg>",
-      "sizes": "192x192",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23050406'/><rect x='10' y='10' width='80' height='80' rx='16' fill='%23ff2a4b'/><text x='50' y='68' font-size='52' font-family='sans-serif' font-weight='900' fill='%23050406' text-anchor='middle'>E</text></svg>",
-      "sizes": "512x512",
-      "type": "image/svg+xml"
+      "src": "/static/images/logo.png",
+      "sizes": "512x341",
+      "type": "image/png"
     }
   ]
 }

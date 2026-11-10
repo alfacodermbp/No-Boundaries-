@@ -42,18 +42,23 @@ const App = {
       height = canvas.height = window.innerHeight;
     });
 
+    // Respect reduced motion accessibility
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
     const particles = [];
-    const count = Math.min(Math.floor(width / 24), 60);
+    const count = Math.min(Math.floor(width / 32), 45);
 
     for (let i = 0; i < count; i++) {
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        radius: Math.random() * 1.6 + 0.4,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: -Math.random() * 0.5 - 0.2, // float upward
-        alpha: Math.random() * 0.6 + 0.2,
-        color: Math.random() > 0.4 ? '255, 42, 75' : '255, 255, 255'
+        radius: Math.random() * 1.5 + 0.4,
+        vx: (Math.random() - 0.5) * 0.25,
+        vy: -Math.random() * 0.35 - 0.15, // gentle upward drift
+        alpha: Math.random() * 0.45 + 0.15,
+        color: Math.random() > 0.65 ? '240, 68, 82' : '245, 242, 234'
       });
     }
 
@@ -74,8 +79,8 @@ const App = {
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(${p.color}, ${p.alpha})`;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = `rgba(${p.color}, 0.8)`;
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = `rgba(${p.color}, 0.5)`;
         ctx.fill();
       });
 
