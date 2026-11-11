@@ -89,6 +89,10 @@ def validate_url(url_str: str) -> str:
     if host_lower in BLOCKED_HOSTS or host_lower.endswith(".internal") or host_lower.endswith(".local") or host_lower.startswith("10.") or host_lower.startswith("192.168."):
         raise HTTPException(status_code=400, detail="Access to private or local network hosts is prohibited.")
     
+    # Normalize YouTube Music URLs to standard YouTube URLs
+    if "music.youtube.com" in clean:
+        clean = clean.replace("music.youtube.com", "www.youtube.com")
+
     return clean
 
 def validate_job_id(job_id: str) -> str:

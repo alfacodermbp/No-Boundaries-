@@ -54,7 +54,7 @@ def get_base_ydl_opts():
         },
         'extractor_args': {
             'youtube': {
-                'player_client': ['android', 'ios', 'mweb', 'web']
+                'player_client': ['android', 'ios']
             }
         },
         'remote_components': ['ejs:github'],
@@ -201,6 +201,10 @@ def extract_media_info(url: str):
     Extracts comprehensive metadata, video format options (4k, 1080p, 720p, etc.),
     and audio options for any supported website link with multi-tier client rotation and automatic retry.
     """
+    # Normalize YouTube Music to standard YouTube watch endpoint for 100% reliable mobile extraction
+    if 'music.youtube.com' in url.lower():
+        url = url.replace('music.youtube.com', 'www.youtube.com')
+
     # Special route: Snapchat Spotlight & Stories
     if 'snapchat.com' in url.lower():
         try:
@@ -214,10 +218,10 @@ def extract_media_info(url: str):
     # Multi-tier extraction strategies with automated client rotation:
     # 1. Chrome TLS Impersonation (Primary Desktop)
     # 2. Safari / Mobile Impersonation with client rotation
-    # 3. Android / mweb fallback with persistent session
+    # 3. Android / iOS native client fallback
     strategies = [
-        {"impersonate": "chrome", "client": None},
-        {"impersonate": "safari", "client": "mweb"},
+        {"impersonate": "chrome", "client": "android"},
+        {"impersonate": "safari", "client": "ios"},
         {"impersonate": "chrome", "client": "android"},
     ]
 
@@ -244,7 +248,7 @@ def extract_media_info(url: str):
             if client_arg and ('youtube.com' in url or 'youtu.be' in url):
                 if 'extractor_args' not in opts:
                     opts['extractor_args'] = {}
-                opts['extractor_args']['youtube'] = {'player_client': [client_arg, 'web']}
+                opts['extractor_args']['youtube'] = {'player_client': [client_arg, 'ios']}
 
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(url, download=False)
