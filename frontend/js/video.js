@@ -408,8 +408,14 @@ const VideoDownloader = {
 
           this.updatePlanetStage('video-planet-sphere', 'video-planet-name', 100);
 
-          // Direct browser download
-          window.location.href = `${window.API_BASE || ''}/api/download-file/${jobId}`;
+          // Direct browser download via anchor element
+          const dlLink = document.createElement('a');
+          dlLink.href = `${window.API_BASE || ''}/api/download-file/${jobId}`;
+          dlLink.download = info.filename || 'video.mp4';
+          dlLink.target = '_blank';
+          document.body.appendChild(dlLink);
+          dlLink.click();
+          document.body.removeChild(dlLink);
           App.showToast("✓ File extracted and saved to your device!");
         } else if (info.status === 'error') {
           clearInterval(this.activePollInterval);

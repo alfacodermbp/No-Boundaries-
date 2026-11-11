@@ -424,8 +424,14 @@ const AudioHub = {
 
           VideoDownloader.updatePlanetStage('audio-planet-sphere', 'audio-planet-name', 100);
 
-          // Direct browser download
-          window.location.href = downloadUrl;
+          // Direct browser download via anchor element
+          const dlLink = document.createElement('a');
+          dlLink.href = downloadUrl;
+          dlLink.download = info.filename || 'song.mp3';
+          dlLink.target = '_blank';
+          document.body.appendChild(dlLink);
+          dlLink.click();
+          document.body.removeChild(dlLink);
           App.showToast("✓ High-res song downloaded to your device!");
         } else if (info.status === 'error') {
           clearInterval(this.activePollInterval);

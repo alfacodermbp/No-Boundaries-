@@ -411,8 +411,14 @@ const PlaylistStudio = {
 
           VideoDownloader.updatePlanetStage('playlist-planet-sphere', 'playlist-planet-name', 100);
 
-          // Trigger browser ZIP download
-          window.location.href = downloadUrl;
+          // Trigger browser ZIP download via anchor element
+          const dlLink = document.createElement('a');
+          dlLink.href = downloadUrl;
+          dlLink.download = info.filename || 'playlist.zip';
+          dlLink.target = '_blank';
+          document.body.appendChild(dlLink);
+          dlLink.click();
+          document.body.removeChild(dlLink);
           App.showToast("✓ Full playlist ZIP archive downloaded to your device!");
         } else if (info.status === 'error') {
           clearInterval(this.activePollInterval);

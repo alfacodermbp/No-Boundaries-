@@ -369,10 +369,11 @@ def extract_media_info(url: str):
     }
 
     # Group video formats across all supported resolution tiers from highest to lowest
-    effective_max = max_source_height or 1080
+    effective_max = max(max_source_height or 1080, 1080)
     for target_h in target_heights:
-        # Include tier if source has video that reaches within reach, or for standard mobile tiers
-        if effective_max >= target_h * 0.88 or target_h <= 360:
+        # Always provide 4K, 1080p, 720p, 480p, 360p, 240p, 144p for universal user choice
+        is_standard_tier = target_h in (2160, 1080, 720, 480, 360, 240, 144)
+        if is_standard_tier or effective_max >= target_h * 0.88:
             label, res_tag = height_labels[target_h]
             matching = [f for f in formats if f.get('height') and abs(f['height'] - target_h) <= 70]
             
