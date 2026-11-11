@@ -34,7 +34,7 @@ def search_songs(query: str, limit: int = 8):
     if not query:
         return []
 
-    opts = get_base_ydl_opts()
+    opts = get_base_ydl_opts("https://www.youtube.com")
     opts.update({
         'skip_download': True,
         'extract_flat': 'in_playlist',

@@ -40,32 +40,38 @@ def sanitize_filename(name):
     clean = clean.strip()
     return clean[:120] if clean else "download"
 
-def get_base_ydl_opts():
+def get_base_ydl_opts(url: str = None):
+    is_youtube = bool(url and ('youtube.com' in url.lower() or 'youtu.be' in url.lower()))
+
     opts = {
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
-        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-        'http_headers': {
+        'remote_components': ['ejs:github'],
+    }
+
+    if is_youtube:
+        # YouTube requests use the pure native Android client with configs skipped to bypass datacenter bot challenges
+        opts['extractor_args'] = {
+            'youtube': {
+                'player_client': ['android'],
+                'player_skip': ['webpage', 'configs']
+            }
+        }
+    else:
+        # Generic and social platforms (Instagram, TikTok, Twitter/X) require Chrome TLS browser impersonation
+        opts['user_agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
+        opts['http_headers'] = {
             'Accept-Language': 'en-US,en;q=0.9',
             'Sec-Ch-Ua': '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
             'Sec-Ch-Ua-Mobile': '?0',
             'Sec-Ch-Ua-Platform': '"Windows"',
-        },
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['android', 'ios']
-            }
-        },
-        'remote_components': ['ejs:github'],
-    }
-    
-    # Enable Chrome TLS browser impersonation via curl-cffi for Instagram, TikTok, Cloudflare
-    try:
-        from yt_dlp.networking.impersonate import ImpersonateTarget
-        opts['impersonate'] = ImpersonateTarget.from_str('chrome')
-    except Exception:
-        pass
+        }
+        try:
+            from yt_dlp.networking.impersonate import ImpersonateTarget
+            opts['impersonate'] = ImpersonateTarget.from_str('chrome')
+        except Exception:
+            pass
 
     deno_exe = Path.home() / ".deno" / "bin" / "deno.exe"
     if deno_exe.exists():
@@ -214,20 +220,25 @@ def extract_media_info(url: str):
 
     last_error = None
     info = None
+    is_youtube = 'youtube.com' in url.lower() or 'youtu.be' in url.lower()
 
     # Multi-tier extraction strategies with automated client rotation:
-    # 1. Chrome TLS Impersonation (Primary Desktop)
-    # 2. Safari / Mobile Impersonation with client rotation
-    # 3. Android / iOS native client fallback
-    strategies = [
-        {"impersonate": "chrome", "client": "android"},
-        {"impersonate": "safari", "client": "ios"},
-        {"impersonate": "chrome", "client": "android"},
-    ]
+    if is_youtube:
+        strategies = [
+            {"client": "android"},
+            {"client": "mweb"},
+            {"client": "android"},
+        ]
+    else:
+        strategies = [
+            {"impersonate": "chrome"},
+            {"impersonate": "safari"},
+            {"impersonate": "chrome"},
+        ]
 
     for attempt, strat in enumerate(strategies, start=1):
         try:
-            opts = get_base_ydl_opts()
+            opts = get_base_ydl_opts(url)
             opts.update({
                 'skip_download': True,
                 'extract_flat': False,
@@ -236,19 +247,22 @@ def extract_media_info(url: str):
                 'extractor_retries': 3,
             })
 
-            imp_name = strat.get('impersonate')
-            if imp_name:
-                try:
-                    from yt_dlp.networking.impersonate import ImpersonateTarget
-                    opts['impersonate'] = ImpersonateTarget.from_str(imp_name)
-                except Exception:
-                    pass
-
-            client_arg = strat.get('client')
-            if client_arg and ('youtube.com' in url or 'youtu.be' in url):
-                if 'extractor_args' not in opts:
-                    opts['extractor_args'] = {}
-                opts['extractor_args']['youtube'] = {'player_client': [client_arg, 'ios']}
+            if is_youtube:
+                opts.pop('impersonate', None)
+                opts['extractor_args'] = {
+                    'youtube': {
+                        'player_client': [strat.get('client', 'android')],
+                        'player_skip': ['webpage', 'configs']
+                    }
+                }
+            else:
+                imp_name = strat.get('impersonate')
+                if imp_name:
+                    try:
+                        from yt_dlp.networking.impersonate import ImpersonateTarget
+                        opts['impersonate'] = ImpersonateTarget.from_str(imp_name)
+                    except Exception:
+                        pass
 
             with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(url, download=False)
@@ -262,12 +276,20 @@ def extract_media_info(url: str):
     # Ultimate fallback: flat playlist / generic extraction
     if not info:
         try:
-            fallback_opts = get_base_ydl_opts()
+            fallback_opts = get_base_ydl_opts(url)
             fallback_opts.update({
                 'skip_download': True,
                 'extract_flat': 'in_playlist',
                 'socket_timeout': 15,
             })
+            if is_youtube:
+                fallback_opts.pop('impersonate', None)
+                fallback_opts['extractor_args'] = {
+                    'youtube': {
+                        'player_client': ['android'],
+                        'player_skip': ['webpage', 'configs']
+                    }
+                }
             with yt_dlp.YoutubeDL(fallback_opts) as ydl_flat:
                 info = ydl_flat.extract_info(url, download=False)
         except Exception as e:
@@ -550,7 +572,7 @@ def run_download_video(job_id: str, url: str, format_selector: str, title: str):
         target_url = format_selector if format_selector and format_selector.startswith('http') else url
         chosen_format = 'best' if format_selector and format_selector.startswith('http') else (format_selector or 'bestvideo+bestaudio/best')
 
-        opts = get_base_ydl_opts()
+        opts = get_base_ydl_opts(target_url)
         opts.update({
             'format': chosen_format if FFMPEG_DIR else ('best[ext=mp4]/best' if 'bestvideo' in chosen_format else chosen_format),
             'outtmpl': out_template,
@@ -629,7 +651,7 @@ def run_download_audio(job_id: str, url: str, quality_tag: str, title: str, arti
         clean_title = sanitize_filename(title)
         out_template = str(TEMP_DIR / f"{job_id}_{clean_title}.%(ext)s")
 
-        opts = get_base_ydl_opts()
+        opts = get_base_ydl_opts(target_url)
         opts.update({
             'format': 'bestaudio/best',
             'outtmpl': out_template,

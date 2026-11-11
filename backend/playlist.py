@@ -66,7 +66,7 @@ def extract_playlist_items(url: str):
     Extracts complete playlist metadata and all tracks cleanly.
     Allows frontend to render individual track selection checkboxes.
     """
-    opts = get_base_ydl_opts()
+    opts = get_base_ydl_opts(url)
     opts.update({
         'skip_download': True,
         'extract_flat': 'in_playlist',
@@ -187,7 +187,7 @@ def run_batch_playlist_download(job_id: str, playlist_title: str, selected_track
             sub_job_id = f"sub_{job_id}_{idx}"
             sub_template = str(batch_temp_dir / f"{clean_track_title}.%(ext)s")
 
-            opts = get_base_ydl_opts()
+            opts = get_base_ydl_opts(url)
             opts.update({
                 'format': 'bestaudio/best',
                 'outtmpl': sub_template,
