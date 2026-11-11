@@ -192,6 +192,15 @@ const PlaylistStudio = {
     const selectedTracks = this.currentPlaylist.tracks.filter(t => this.selectedTrackIds.has(t.id));
     const qualityTag = document.getElementById('playlist-quality-select').value || '320k';
 
+    // Playlist batch ZIP archiving requires the persistent Render engine with FFmpeg & background worker
+    if (!window.API_BASE) {
+      App.showToast("⚡ Full Playlist ZIP bundling requires the Render Engine. Tap ENGINE at top to connect!");
+      if (typeof App.openEngineModal === 'function') {
+        App.openEngineModal();
+      }
+      return;
+    }
+
     const progressPanel = document.getElementById('playlist-download-progress');
     progressPanel.style.display = 'block';
 

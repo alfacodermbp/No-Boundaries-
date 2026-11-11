@@ -152,6 +152,20 @@ const VideoDownloader = {
   startDownloadByIndex(idx) {
     if (!this.currentMedia || !this.currentMedia.video_formats || !this.currentMedia.video_formats[idx]) return;
     const f = this.currentMedia.video_formats[idx];
+
+    // When Render backend engine is not connected, use direct stream to avoid serverless freeze & ensure 100% download success
+    if (!window.API_BASE && this.currentMedia.direct_stream_url) {
+      App.showToast(`⚡ Direct mobile stream started for ${f.quality}...`);
+      const a = document.createElement('a');
+      a.href = this.currentMedia.direct_stream_url;
+      a.download = `${(this.currentMedia.title || 'video').replace(/[/\\?%*:|"<>]/g, '')}.mp4`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
     this.startDownload(f.format_selector, f.quality);
   },
 

@@ -7,10 +7,8 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-downloads/*
-!downloads/.gitkeep
-temp/*
-!temp/.gitkeep
+downloads/
+temp/
 *.part
 *.ytdl
 

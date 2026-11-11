@@ -183,6 +183,20 @@ const AudioHub = {
   downloadByIndex(idx) {
     if (!this.currentMedia || !this.currentMedia.audio_formats || !this.currentMedia.audio_formats[idx]) return;
     const af = this.currentMedia.audio_formats[idx];
+
+    // If Render backend is not connected, use direct mobile stream to avoid serverless freeze
+    if (!window.API_BASE && this.currentMedia.direct_stream_url) {
+      App.showToast(`⚡ Direct mobile stream started for ${af.label}...`);
+      const a = document.createElement('a');
+      a.href = this.currentMedia.direct_stream_url;
+      a.download = `${(this.currentMedia.title || 'audio').replace(/[/\\?%*:|"<>]/g, '')}.${af.ext === 'mp3' ? 'mp4' : af.ext}`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      return;
+    }
+
     this.downloadFromUrl(
       this.currentMedia.webpage_url,
       af.quality_tag,

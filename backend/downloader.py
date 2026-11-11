@@ -51,10 +51,10 @@ def get_base_ydl_opts(url: str = None):
     }
 
     if is_youtube:
-        # YouTube requests use the pure native Android client with configs skipped to bypass datacenter bot challenges
+        # YouTube requests use the pure native Android and TV clients to completely bypass datacenter bot challenges
         opts['extractor_args'] = {
             'youtube': {
-                'player_client': ['android'],
+                'player_client': ['android', 'tv'],
                 'player_skip': ['webpage', 'configs']
             }
         }
@@ -226,8 +226,8 @@ def extract_media_info(url: str):
     if is_youtube:
         strategies = [
             {"client": "android"},
-            {"client": "mweb"},
-            {"client": "android"},
+            {"client": "tv"},
+            {"client": "android,tv"},
         ]
     else:
         strategies = [
@@ -471,6 +471,21 @@ def extract_media_info(url: str):
         }
     ]
 
+    direct_stream = info.get('url')
+    if not direct_stream and info.get('formats'):
+        # Pick the best progressive or playable direct format with valid URL
+        playable = [
+            f for f in info.get('formats', [])
+            if f.get('url') and f.get('vcodec') != 'none'
+        ]
+        if playable:
+            best_play = max(playable, key=lambda x: (x.get('height') or 0, x.get('tbr') or 0))
+            direct_stream = best_play.get('url')
+        else:
+            any_url = [f for f in info.get('formats', []) if f.get('url')]
+            if any_url:
+                direct_stream = any_url[-1].get('url')
+
     return {
         'is_playlist': False,
         'id': info.get('id', str(uuid.uuid4())[:8]),
@@ -481,7 +496,7 @@ def extract_media_info(url: str):
         'thumbnail': thumbnail,
         'extractor': extractor,
         'webpage_url': info.get('webpage_url', url),
-        'direct_stream_url': info.get('url'),
+        'direct_stream_url': direct_stream,
         'video_formats': list(resolution_map.values()),
         'audio_formats': audio_options
     }

@@ -1,21 +1,32 @@
 import os
 import shutil
-from pathlib import Path
-
-import os
-import shutil
 import tempfile
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 
-# Check if running in a serverless environment (Vercel, AWS Lambda) or read-only filesystem
+def _is_dir_actually_writable(p: Path) -> bool:
+    try:
+        p.mkdir(parents=True, exist_ok=True)
+        test_file = p / f".write_probe_{os.getpid()}"
+        with open(test_file, "w") as f:
+            f.write("probe")
+        test_file.unlink(missing_ok=True)
+        return True
+    except Exception:
+        return False
+
+# Detect any serverless, cloud container, or read-only execution context
+base_dir_str = str(BASE_DIR).replace("\\", "/")
 is_serverless = (
-    bool(os.environ.get("VERCEL"))
+    base_dir_str.startswith("/var/task")
+    or base_dir_str.startswith("/var/runtime")
+    or bool(os.environ.get("VERCEL"))
+    or bool(os.environ.get("VERCEL_ENV"))
     or bool(os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
     or bool(os.environ.get("LAMBDA_TASK_ROOT"))
-    or not os.access(str(BASE_DIR), os.W_OK)
+    or not _is_dir_actually_writable(BASE_DIR / "temp")
 )
 
 if is_serverless:
