@@ -7,3 +7,4 @@ aiofiles>=23.2.0
 mutagen>=1.47.0
 pydantic>=2.6.0
 python-multipart>=0.0.9
+curl-cffi>=0.17.0
