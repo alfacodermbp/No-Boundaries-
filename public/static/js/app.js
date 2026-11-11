@@ -4,11 +4,23 @@
  * Core App Controller: Scroll Effects, Particle Canvas, Navigation & Toasts
  */
 
-// Production API Base URL (empty string for relative /api with Vercel rewrites, or custom backend URL)
-window.API_BASE = window.API_BASE || '';
+// Production API Base URL (reads from localStorage if user connects custom Render backend, or relative /api)
+window.API_BASE = localStorage.getItem('API_BASE') || window.API_BASE || '';
 
 const App = {
   activeTab: 'video',
+
+  parseError(data, fallback = "An error occurred.") {
+    if (!data) return fallback;
+    if (typeof data === 'string') return data;
+    const detail = data.detail || data.error || data.message;
+    if (!detail) return fallback;
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      return detail.map(d => (typeof d === 'string' ? d : d.msg || JSON.stringify(d))).join(', ');
+    }
+    return JSON.stringify(detail);
+  },
 
   init() {
     this.setupScrollProgress();

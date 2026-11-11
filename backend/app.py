@@ -5,7 +5,7 @@ import threading
 from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urlparse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -140,34 +140,40 @@ start_cleanup_scheduler()
 # ----------------- PYDANTIC SCHEMAS ----------------- #
 
 class AnalyzeRequest(BaseModel):
-    url: str = Field(..., max_length=2048)
+    model_config = ConfigDict(extra="ignore")
+    url: str = Field(..., max_length=4096)
 
 class VideoDownloadRequest(BaseModel):
-    url: str = Field(..., max_length=2048)
-    format_selector: str = Field(..., max_length=256)
-    title: str = Field(..., max_length=256)
+    model_config = ConfigDict(extra="ignore")
+    url: str = Field(..., max_length=4096)
+    format_selector: str = Field(default="bestvideo+bestaudio/best", max_length=1024)
+    title: str = Field(default="Video", max_length=1024)
 
 class AudioDownloadRequest(BaseModel):
-    url: str = Field(..., max_length=2048)
-    quality_tag: str = Field(..., max_length=32)
-    title: str = Field(..., max_length=256)
-    artist: Optional[str] = Field(default="", max_length=256)
-    thumbnail: Optional[str] = Field(default="", max_length=2048)
+    model_config = ConfigDict(extra="ignore")
+    url: str = Field(..., max_length=4096)
+    quality_tag: str = Field(default="320k", max_length=64)
+    title: str = Field(default="Audio Track", max_length=1024)
+    artist: Optional[str] = Field(default="", max_length=1024)
+    thumbnail: Optional[str] = Field(default=None, max_length=4096)
 
 class PlaylistAnalyzeRequest(BaseModel):
-    url: str = Field(..., max_length=2048)
+    model_config = ConfigDict(extra="ignore")
+    url: str = Field(..., max_length=4096)
 
 class SelectedTrack(BaseModel):
-    index: int
-    title: str = Field(..., max_length=256)
-    artist: Optional[str] = Field(default="", max_length=256)
-    url: str = Field(..., max_length=2048)
-    thumbnail: Optional[str] = Field(default="", max_length=2048)
+    model_config = ConfigDict(extra="ignore")
+    index: int = 1
+    title: str = Field(default="Track", max_length=1024)
+    artist: Optional[str] = Field(default="", max_length=1024)
+    url: str = Field(..., max_length=4096)
+    thumbnail: Optional[str] = Field(default=None, max_length=4096)
 
 class PlaylistDownloadRequest(BaseModel):
-    playlist_title: str = Field(..., max_length=256)
+    model_config = ConfigDict(extra="ignore")
+    playlist_title: str = Field(default="Playlist", max_length=1024)
     selected_tracks: List[SelectedTrack]
-    quality_tag: str = Field(default="320k", max_length=32)
+    quality_tag: str = Field(default="320k", max_length=64)
 
 # ----------------- API ROUTES ----------------- #
 

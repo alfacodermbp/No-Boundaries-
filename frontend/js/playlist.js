@@ -36,7 +36,7 @@ const PlaylistStudio = {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.detail || "Failed to load playlist.");
+        throw new Error(App.parseError(data, "Failed to load playlist."));
       }
 
       this.currentPlaylist = data;
@@ -224,7 +224,7 @@ const PlaylistStudio = {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Failed to start batch playlist download.");
+      if (!res.ok) throw new Error(App.parseError(data, "Failed to start batch playlist download."));
 
       this.pollProgress(data.job_id);
     } catch (err) {
@@ -409,10 +409,11 @@ const PlaylistStudio = {
           clearInterval(this.activePollInterval);
           statusBadge.textContent = 'FAILED';
           statusBadge.style.color = '#ff2a4b';
-          speedLabel.textContent = info.error || 'Batch download failed.';
+          const errStr = App.parseError(info.error, 'Batch download failed.');
+          speedLabel.textContent = errStr;
           if (pauseBtn) pauseBtn.style.display = 'none';
           if (cancelBtn) cancelBtn.style.display = 'none';
-          App.showToast(`Error: ${info.error}`);
+          App.showToast(`Error: ${errStr}`);
         }
       } catch (err) {
         console.warn('Playlist progress check error:', err);

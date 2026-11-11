@@ -2,13 +2,36 @@ import os
 import shutil
 from pathlib import Path
 
+import os
+import shutil
+import tempfile
+from pathlib import Path
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-DOWNLOADS_DIR = BASE_DIR / "downloads"
-TEMP_DIR = BASE_DIR / "temp"
 FRONTEND_DIR = BASE_DIR / "frontend"
 
-DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
-TEMP_DIR.mkdir(parents=True, exist_ok=True)
+# Check if running in a serverless environment (Vercel, AWS Lambda) or read-only filesystem
+is_serverless = (
+    bool(os.environ.get("VERCEL"))
+    or bool(os.environ.get("AWS_LAMBDA_FUNCTION_NAME"))
+    or bool(os.environ.get("LAMBDA_TASK_ROOT"))
+    or not os.access(str(BASE_DIR), os.W_OK)
+)
+
+if is_serverless:
+    system_temp = Path(tempfile.gettempdir())
+    DOWNLOADS_DIR = system_temp / "noboundaries_downloads"
+    TEMP_DIR = system_temp / "noboundaries_temp"
+else:
+    DOWNLOADS_DIR = BASE_DIR / "downloads"
+    TEMP_DIR = BASE_DIR / "temp"
+
+try:
+    DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    DOWNLOADS_DIR = Path(tempfile.gettempdir())
+    TEMP_DIR = Path(tempfile.gettempdir())
 
 # Detect ffmpeg path
 def find_ffmpeg():

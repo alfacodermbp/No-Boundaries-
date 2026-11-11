@@ -59,7 +59,7 @@ const AudioHub = {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.detail || "Search request failed.");
+        throw new Error(App.parseError(data, "Search request failed."));
       }
 
       if (data.type === 'direct_url') {
@@ -212,7 +212,7 @@ const AudioHub = {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Audio download failed.");
+      if (!res.ok) throw new Error(App.parseError(data, "Audio download failed."));
 
       this.pollProgress(data.job_id);
     } catch (err) {
@@ -397,10 +397,11 @@ const AudioHub = {
           clearInterval(this.activePollInterval);
           statusBadge.textContent = 'FAILED';
           statusBadge.style.color = '#ff2a4b';
-          speedLabel.textContent = info.error || 'Audio extraction failed.';
+          const errStr = App.parseError(info.error, 'Audio extraction failed.');
+          speedLabel.textContent = errStr;
           if (pauseBtn) pauseBtn.style.display = 'none';
           if (cancelBtn) cancelBtn.style.display = 'none';
-          App.showToast(`Error: ${info.error}`);
+          App.showToast(`Error: ${errStr}`);
         }
       } catch (err) {
         console.warn('Audio progress poll error:', err);

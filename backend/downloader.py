@@ -52,6 +52,11 @@ def get_base_ydl_opts():
             'Sec-Ch-Ua-Mobile': '?0',
             'Sec-Ch-Ua-Platform': '"Windows"',
         },
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'ios', 'mweb', 'web']
+            }
+        },
         'remote_components': ['ejs:github'],
     }
     
@@ -530,15 +535,17 @@ def run_download_video(job_id: str, url: str, format_selector: str, title: str):
 
         opts = get_base_ydl_opts()
         opts.update({
-            'format': chosen_format,
+            'format': chosen_format if FFMPEG_DIR else ('best[ext=mp4]/best' if 'bestvideo' in chosen_format else chosen_format),
             'outtmpl': out_template,
-            'merge_output_format': 'mp4',
             'progress_hooks': [create_progress_hook(job_id)],
-            'postprocessors': [{
+        })
+
+        if FFMPEG_DIR:
+            opts['merge_output_format'] = 'mp4'
+            opts['postprocessors'] = [{
                 'key': 'FFmpegVideoConvertor',
                 'preferedformat': 'mp4',
             }]
-        })
 
         with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([target_url])
@@ -606,29 +613,25 @@ def run_download_audio(job_id: str, url: str, quality_tag: str, title: str, arti
         out_template = str(TEMP_DIR / f"{job_id}_{clean_title}.%(ext)s")
 
         opts = get_base_ydl_opts()
-        bitrate = '320' if quality_tag == '320k' else ('256' if quality_tag == '256k' else '192')
+        opts.update({
+            'format': 'bestaudio/best',
+            'outtmpl': out_template,
+            'progress_hooks': [create_progress_hook(job_id)],
+        })
 
-        if quality_tag == 'original':
-            opts.update({
-                'format': 'bestaudio/best',
-                'outtmpl': out_template,
-                'progress_hooks': [create_progress_hook(job_id)],
-                'postprocessors': [{
+        if FFMPEG_DIR:
+            bitrate = '320' if quality_tag == '320k' else ('256' if quality_tag == '256k' else '192')
+            if quality_tag == 'original':
+                opts['postprocessors'] = [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'm4a',
                 }]
-            })
-        else:
-            opts.update({
-                'format': 'bestaudio/best',
-                'outtmpl': out_template,
-                'progress_hooks': [create_progress_hook(job_id)],
-                'postprocessors': [{
+            else:
+                opts['postprocessors'] = [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                     'preferredquality': bitrate,
                 }]
-            })
 
         with yt_dlp.YoutubeDL(opts) as ydl:
             ydl.download([url])

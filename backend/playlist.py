@@ -188,27 +188,28 @@ def run_batch_playlist_download(job_id: str, playlist_title: str, selected_track
             sub_template = str(batch_temp_dir / f"{clean_track_title}.%(ext)s")
 
             opts = get_base_ydl_opts()
-            bitrate = '320' if quality_tag == '320k' else ('256' if quality_tag == '256k' else '192')
-            
             opts.update({
                 'format': 'bestaudio/best',
                 'outtmpl': sub_template,
                 'progress_hooks': [create_playlist_track_hook(job_id, idx, total_items)],
-                'postprocessors': [{
+            })
+
+            if FFMPEG_DIR:
+                bitrate = '320' if quality_tag == '320k' else ('256' if quality_tag == '256k' else '192')
+                opts['postprocessors'] = [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
                     'preferredquality': bitrate,
                 }]
-            })
 
             try:
                 with yt_dlp.YoutubeDL(opts) as ydl:
                     ydl.download([sub_url])
 
-                # Check for output mp3
-                mp3_file = batch_temp_dir / f"{clean_track_title}.mp3"
-                if mp3_file.exists():
-                    downloaded_files.append(mp3_file)
+                # Check for output audio file (mp3, m4a, webm)
+                matching_tracks = list(batch_temp_dir.glob(f"{clean_track_title}.*"))
+                if matching_tracks:
+                    downloaded_files.append(matching_tracks[0])
             except Exception as e:
                 # Log and continue with other tracks
                 print(f"Failed to download track {idx}: {e}")

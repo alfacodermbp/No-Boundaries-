@@ -45,7 +45,7 @@ const VideoDownloader = {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.detail || "Failed to analyze URL. Please paste again if platform was warming up.");
+        throw new Error(App.parseError(data, "Failed to analyze URL. Please paste again if platform was warming up."));
       }
 
       if (data.is_playlist) {
@@ -171,7 +171,7 @@ const VideoDownloader = {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Download initialization failed.");
+      if (!res.ok) throw new Error(App.parseError(data, "Download initialization failed."));
 
       this.pollProgress(data.job_id);
     } catch (err) {
@@ -381,10 +381,11 @@ const VideoDownloader = {
           clearInterval(this.activePollInterval);
           statusBadge.textContent = 'FAILED';
           statusBadge.style.color = '#ff2a4b';
-          speedLabel.textContent = info.error || 'Extraction failed.';
+          const errStr = App.parseError(info.error, 'Extraction failed.');
+          speedLabel.textContent = errStr;
           if (pauseBtn) pauseBtn.style.display = 'none';
           if (cancelBtn) cancelBtn.style.display = 'none';
-          App.showToast(`Error: ${info.error}`);
+          App.showToast(`Error: ${errStr}`);
         }
       } catch (err) {
         console.warn('Progress poll error:', err);
