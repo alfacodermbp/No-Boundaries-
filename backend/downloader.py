@@ -443,6 +443,7 @@ def extract_media_info(url: str):
         'thumbnail': thumbnail,
         'extractor': extractor,
         'webpage_url': info.get('webpage_url', url),
+        'direct_stream_url': info.get('url'),
         'video_formats': list(resolution_map.values()),
         'audio_formats': audio_options
     }

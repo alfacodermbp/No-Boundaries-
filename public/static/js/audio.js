@@ -135,6 +135,26 @@ const AudioHub = {
     const grid = document.getElementById('audio-formats-grid');
     grid.innerHTML = '';
 
+    if (media.direct_stream_url) {
+      const directEl = document.createElement('div');
+      directEl.className = 'format-card highlight';
+      directEl.innerHTML = `
+        <div>
+          <div class="format-badge-row">
+            <span class="res-badge" style="background:#00e5ff; color:#050406;">DIRECT</span>
+            <span class="format-ext">SOURCE</span>
+          </div>
+          <div class="format-label">Direct Media Source (Mobile Instant Save)</div>
+          <div class="format-size">Direct CDN Link • 1-Click Download</div>
+        </div>
+        <a class="btn-download-format" href="${media.direct_stream_url}" target="_blank" download="${(media.title || 'track').replace(/\"/g, '')}.mp4" style="text-decoration:none; display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; background:#00e5ff; color:#050406; font-weight:800;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          DIRECT SAVE
+        </a>
+      `;
+      grid.appendChild(directEl);
+    }
+
     const audioFormats = media.audio_formats || [];
     audioFormats.forEach((af, idx) => {
       const isMaster = af.bitrate === 320;
