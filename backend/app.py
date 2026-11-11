@@ -191,7 +191,8 @@ async def health_check():
         "status": "healthy",
         "service": "Everything Free Media Studio",
         "timestamp": int(time.time()),
-        "ffmpeg": bool(FFMPEG_DIR)
+        "ffmpeg": bool(FFMPEG_DIR),
+        "version": "2.4.0-android-direct"
     }
 
 @app.post("/api/analyze")
