@@ -27,15 +27,25 @@ const VideoDownloader = {
     resultCard.style.display = 'none';
 
     try {
-      const res = await fetch(`${window.API_BASE || ''}/api/analyze`, {
+      let res = await fetch(`${window.API_BASE || ''}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url })
       });
 
+      // Automated client-side retry if first attempt encountered a platform handshake
+      if (!res.ok) {
+        await new Promise(r => setTimeout(r, 600));
+        res = await fetch(`${window.API_BASE || ''}/api/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+      }
+
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.detail || "Failed to analyze URL.");
+        throw new Error(data.detail || "Failed to analyze URL. Please paste again if platform was warming up.");
       }
 
       if (data.is_playlist) {

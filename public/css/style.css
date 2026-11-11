@@ -1641,3 +1641,74 @@ button, a, select, input {
     padding: 0.25rem 0.55rem;
   }
 }
+
+/* ========================================================
+   ANIMATED HIGHLIGHT RETRY CAPTION / HINT
+======================================================== */
+.quick-retry-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  padding: 0.55rem 0.95rem;
+  background: rgba(255, 42, 75, 0.08);
+  border: 1px solid rgba(255, 42, 75, 0.45);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #f0f0f5;
+  animation: hintPulseGlow 2.8s ease-in-out infinite;
+  box-shadow: 0 0 12px rgba(255, 42, 75, 0.15);
+}
+
+.hint-badge-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #ff2a4b;
+  color: #050406;
+  font-weight: 900;
+  font-size: 0.68rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(255, 42, 75, 0.7);
+}
+
+.hint-text {
+  flex: 1;
+  line-height: 1.45;
+  color: #f2f2f7;
+}
+
+.hint-text strong {
+  color: #ff2a4b;
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(255, 42, 75, 0.65);
+}
+
+@keyframes hintPulseGlow {
+  0%, 100% {
+    border-color: rgba(255, 42, 75, 0.4);
+    box-shadow: 0 0 10px rgba(255, 42, 75, 0.15);
+  }
+  50% {
+    border-color: rgba(255, 42, 75, 0.95);
+    box-shadow: 0 0 22px rgba(255, 42, 75, 0.45);
+    background: rgba(255, 42, 75, 0.14);
+  }
+}
+
+@media (max-width: 640px) {
+  .quick-retry-hint {
+    font-size: 0.74rem;
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  .hint-badge-icon {
+    font-size: 0.62rem;
+    padding: 0.1rem 0.35rem;
+  }
+}

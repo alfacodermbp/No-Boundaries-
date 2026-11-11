@@ -194,49 +194,81 @@ def extract_snapchat_media(url: str):
 def extract_media_info(url: str):
     """
     Extracts comprehensive metadata, video format options (4k, 1080p, 720p, etc.),
-    and audio options for any supported website link with multi-client fallback.
+    and audio options for any supported website link with multi-tier client rotation and automatic retry.
     """
     # Special route: Snapchat Spotlight & Stories
     if 'snapchat.com' in url.lower():
         try:
             return extract_snapchat_media(url)
-        except Exception as e:
-            # Continue to yt-dlp generic fallback
+        except Exception:
             pass
 
-    opts = get_base_ydl_opts()
-    opts.update({
-        'skip_download': True,
-        'extract_flat': False,
-    })
-
+    last_error = None
     info = None
-    with yt_dlp.YoutubeDL(opts) as ydl:
+
+    # Multi-tier extraction strategies with automated client rotation:
+    # 1. Chrome TLS Impersonation (Primary Desktop)
+    # 2. Safari / Mobile Impersonation with client rotation
+    # 3. Android / mweb fallback with persistent session
+    strategies = [
+        {"impersonate": "chrome", "client": None},
+        {"impersonate": "safari", "client": "mweb"},
+        {"impersonate": "chrome", "client": "android"},
+    ]
+
+    for attempt, strat in enumerate(strategies, start=1):
         try:
-            info = ydl.extract_info(url, download=False)
-        except Exception as e:
-            # Fallback 1: Try with youtube player client args if youtube
-            if 'youtube.com' in url or 'youtu.be' in url:
+            opts = get_base_ydl_opts()
+            opts.update({
+                'skip_download': True,
+                'extract_flat': False,
+                'socket_timeout': 15,
+                'retries': 3,
+                'extractor_retries': 3,
+            })
+
+            imp_name = strat.get('impersonate')
+            if imp_name:
                 try:
-                    if 'extractor_args' not in opts:
-                        opts['extractor_args'] = {}
-                    opts['extractor_args']['youtube'] = {'player_client': ['mweb', 'android']}
-                    with yt_dlp.YoutubeDL(opts) as ydl_retry:
-                        info = ydl_retry.extract_info(url, download=False)
+                    from yt_dlp.networking.impersonate import ImpersonateTarget
+                    opts['impersonate'] = ImpersonateTarget.from_str(imp_name)
                 except Exception:
                     pass
 
-            if not info:
-                # Fallback 2: Flat extraction
-                opts['extract_flat'] = 'in_playlist'
-                try:
-                    with yt_dlp.YoutubeDL(opts) as ydl_flat:
-                        info = ydl_flat.extract_info(url, download=False)
-                except Exception:
-                    raise ValueError(f"Could not retrieve media info: {str(e)}")
+            client_arg = strat.get('client')
+            if client_arg and ('youtube.com' in url or 'youtu.be' in url):
+                if 'extractor_args' not in opts:
+                    opts['extractor_args'] = {}
+                opts['extractor_args']['youtube'] = {'player_client': [client_arg, 'web']}
+
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                if info:
+                    break
+
+        except Exception as e:
+            last_error = e
+            time.sleep(0.25 * attempt)
+
+    # Ultimate fallback: flat playlist / generic extraction
+    if not info:
+        try:
+            fallback_opts = get_base_ydl_opts()
+            fallback_opts.update({
+                'skip_download': True,
+                'extract_flat': 'in_playlist',
+                'socket_timeout': 15,
+            })
+            with yt_dlp.YoutubeDL(fallback_opts) as ydl_flat:
+                info = ydl_flat.extract_info(url, download=False)
+        except Exception as e:
+            last_error = e
 
     if not info:
-        raise ValueError("Could not extract media info from the provided URL.")
+        err_msg = str(last_error) if last_error else "Could not extract media info from the provided URL."
+        if "empty media response" in err_msg.lower() or "not granting access" in err_msg.lower():
+            err_msg = "Media is private, restricted, or temporarily blocked by the platform. Please verify the link is public or try pasting once more."
+        raise ValueError(err_msg)
 
     # Check if this is a playlist
     if 'entries' in info and info.get('_type') == 'playlist':

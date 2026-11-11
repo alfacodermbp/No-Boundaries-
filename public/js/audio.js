@@ -51,7 +51,11 @@ const AudioHub = {
     directCard.style.display = 'none';
 
     try {
-      const res = await fetch(`${window.API_BASE || ''}/api/search?q=${encodeURIComponent(query)}`);
+      let res = await fetch(`${window.API_BASE || ''}/api/search?q=${encodeURIComponent(query)}`);
+      if (!res.ok && query.startsWith('http')) {
+        await new Promise(r => setTimeout(r, 600));
+        res = await fetch(`${window.API_BASE || ''}/api/search?q=${encodeURIComponent(query)}`);
+      }
       const data = await res.json();
 
       if (!res.ok) {
