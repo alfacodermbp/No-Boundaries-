@@ -60,7 +60,11 @@
         </button>
       </nav>
 
-      <div class="header-engine-spec">
+      <div class="header-engine-spec" style="display:flex; align-items:center; gap:0.5rem;">
+        <button class="engine-status-btn" id="btn-engine-modal" onclick="App.openEngineModal()" title="Connect Render Cloud Engine">
+          <span class="engine-status-dot" id="engine-status-dot"></span>
+          <span class="engine-status-text" id="engine-status-label">ENGINE</span>
+        </button>
         <span class="engine-tag">4K RAW</span>
         <span class="engine-meta">320K AUDIO</span>
       </div>
@@ -442,6 +446,46 @@
       </div>
     </div>
   </footer>
+
+  <!-- Backend Engine Configuration Modal -->
+  <div class="modal-backdrop" id="engine-modal" style="display:none;" onclick="if(event.target===this) App.closeEngineModal()">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title">⚡ BACKEND ENGINE SETTINGS</h3>
+        <button class="modal-close" onclick="App.closeEngineModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Connect your Render container backend with full 4K DASH Muxing, 320k MP3 audio conversion, and unlimited playlist ZIP archiving.
+        </p>
+        
+        <div class="engine-card">
+          <div class="engine-field-group">
+            <label class="engine-label">RENDER BACKEND URL</label>
+            <input type="url" id="engine-url-input" class="engine-input" placeholder="https://your-service.onrender.com">
+          </div>
+          <div class="engine-btn-row">
+            <button class="btn-engine-connect" onclick="App.saveEngineUrl()">CONNECT & TEST</button>
+            <button class="btn-engine-reset" onclick="App.resetEngineUrl()">RESET TO VERCEL</button>
+          </div>
+        </div>
+
+        <div class="engine-info-box" id="engine-test-result" style="display:none;"></div>
+
+        <div class="engine-guide">
+          <h4>How to get your free Render backend URL (2 minutes):</h4>
+          <ol>
+            <li>Open <a href="https://dashboard.render.com" target="_blank" style="color:#ff2a4b; text-decoration:underline;">dashboard.render.com</a></li>
+            <li>Click <strong>New +</strong> → <strong>Web Service</strong></li>
+            <li>Connect repo: <code>alfacodermbp/No-Boundaries-</code></li>
+            <li>Select <strong>Docker</strong> as the Runtime</li>
+            <li>Click <strong>Deploy Web Service</strong></li>
+            <li>Copy your <code>https://...onrender.com</code> URL and paste it above!</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Scripts -->
   <script src="/static/js/app.js"></script>

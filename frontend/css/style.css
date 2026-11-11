@@ -1712,3 +1712,218 @@ button, a, select, input {
     padding: 0.1rem 0.35rem;
   }
 }
+
+/* Backend Engine Status & Modal */
+.engine-status-btn {
+  background: rgba(255, 42, 75, 0.08);
+  border: 1px solid rgba(255, 42, 75, 0.35);
+  color: #ffffff;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  transition: all 0.25s ease;
+}
+
+.engine-status-btn:hover {
+  background: rgba(255, 42, 75, 0.18);
+  border-color: #ff2a4b;
+  box-shadow: 0 0 12px rgba(255, 42, 75, 0.35);
+}
+
+.engine-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff2a4b;
+  box-shadow: 0 0 8px #ff2a4b;
+  display: inline-block;
+  animation: pulseDot 2s infinite;
+}
+
+.engine-status-dot.connected {
+  background: #00ff88;
+  box-shadow: 0 0 8px #00ff88;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 4, 6, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-box {
+  background: #0c0a10;
+  border: 1px solid rgba(255, 42, 75, 0.4);
+  box-shadow: 0 0 35px rgba(255, 42, 75, 0.25);
+  max-width: 520px;
+  width: 100%;
+  border-radius: 6px;
+  padding: 1.5rem;
+  color: #ffffff;
+  position: relative;
+  animation: modalSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(-15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #ff2a4b;
+  margin: 0;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: #a09fa6;
+  font-size: 1.4rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: #ffffff;
+}
+
+.modal-desc {
+  font-size: 0.82rem;
+  color: #a09fa6;
+  line-height: 1.5;
+  margin-bottom: 1.2rem;
+}
+
+.engine-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.engine-field-group {
+  margin-bottom: 0.8rem;
+}
+
+.engine-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #ff2a4b;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.4rem;
+}
+
+.engine-input {
+  width: 100%;
+  background: #050406;
+  border: 1px solid rgba(255, 42, 75, 0.3);
+  color: #ffffff;
+  padding: 0.65rem 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.engine-input:focus {
+  outline: none;
+  border-color: #ff2a4b;
+  box-shadow: 0 0 12px rgba(255, 42, 75, 0.4);
+}
+
+.engine-btn-row {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.btn-engine-connect {
+  flex: 2;
+  background: #ff2a4b;
+  color: #050406;
+  font-weight: 800;
+  border: none;
+  padding: 0.6rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  border-radius: 3px;
+  letter-spacing: 0.06em;
+}
+
+.btn-engine-reset {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  color: #a09fa6;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.6rem;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.engine-info-box {
+  padding: 0.65rem 0.85rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  margin-bottom: 1rem;
+  line-height: 1.4;
+}
+
+.engine-guide {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 0.9rem;
+  font-size: 0.75rem;
+  color: #a09fa6;
+}
+
+.engine-guide h4 {
+  margin: 0 0 0.5rem 0;
+  font-family: var(--font-mono);
+  color: #ffffff;
+  font-size: 0.78rem;
+}
+
+.engine-guide ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  line-height: 1.6;
+}

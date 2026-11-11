@@ -27,6 +27,7 @@ const App = {
     this.setupParticleCanvas();
     this.setupTabs();
     this.setupClipboardButtons();
+    this.updateEngineStatus();
   },
 
   setupScrollProgress() {
@@ -153,6 +154,108 @@ const App = {
         }
       });
     });
+  },
+
+  openEngineModal() {
+    const modal = document.getElementById('engine-modal');
+    if (!modal) return;
+    const input = document.getElementById('engine-url-input');
+    if (input) input.value = localStorage.getItem('API_BASE') || '';
+    const resBox = document.getElementById('engine-test-result');
+    if (resBox) resBox.style.display = 'none';
+    modal.style.display = 'flex';
+  },
+
+  closeEngineModal() {
+    const modal = document.getElementById('engine-modal');
+    if (modal) modal.style.display = 'none';
+  },
+
+  async saveEngineUrl() {
+    const input = document.getElementById('engine-url-input');
+    const resBox = document.getElementById('engine-test-result');
+    if (!input || !resBox) return;
+
+    let url = input.value.trim();
+    if (!url) {
+      this.resetEngineUrl();
+      return;
+    }
+    url = url.replace(/\/+$/, '');
+
+    resBox.style.display = 'block';
+    resBox.style.background = 'rgba(255, 255, 255, 0.05)';
+    resBox.style.color = '#ffffff';
+    resBox.innerHTML = `Pinging <code>${url}/api/health</code>...`;
+
+    try {
+      const res = await fetch(`${url}/api/health`, { method: 'GET' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to reach backend`);
+      const data = await res.json();
+      
+      localStorage.setItem('API_BASE', url);
+      window.API_BASE = url;
+
+      resBox.style.background = 'rgba(0, 255, 136, 0.12)';
+      resBox.style.color = '#00ff88';
+      resBox.style.border = '1px solid rgba(0, 255, 136, 0.4)';
+      resBox.innerHTML = `
+        <strong>✓ CONNECTED SUCCESSFULLY!</strong><br>
+        Engine: ${data.service || 'Everything Free Studio'}<br>
+        FFmpeg 9.0: <strong>${data.ffmpeg ? 'ACTIVE (Full 4K & MP3 Muxing)' : 'Disabled'}</strong>
+      `;
+
+      this.updateEngineStatus();
+      App.showToast("✓ Connected to Render Cloud Engine!");
+
+      setTimeout(() => {
+        this.closeEngineModal();
+      }, 1800);
+
+    } catch (err) {
+      resBox.style.background = 'rgba(255, 42, 75, 0.12)';
+      resBox.style.color = '#ff2a4b';
+      resBox.style.border = '1px solid rgba(255, 42, 75, 0.4)';
+      resBox.innerHTML = `
+        <strong>✗ CONNECTION FAILED</strong><br>
+        ${err.message}<br>
+        <small>Verify that your Render service is finished building and shows "Live".</small>
+      `;
+    }
+  },
+
+  resetEngineUrl() {
+    localStorage.removeItem('API_BASE');
+    window.API_BASE = '';
+    const input = document.getElementById('engine-url-input');
+    if (input) input.value = '';
+    const resBox = document.getElementById('engine-test-result');
+    if (resBox) {
+      resBox.style.display = 'block';
+      resBox.style.background = 'rgba(255, 255, 255, 0.05)';
+      resBox.style.color = '#ffffff';
+      resBox.style.border = 'none';
+      resBox.innerHTML = 'Reset to default Vercel Edge routing.';
+    }
+    this.updateEngineStatus();
+    App.showToast("Reset to default Vercel routing");
+    setTimeout(() => {
+      this.closeEngineModal();
+    }, 1200);
+  },
+
+  updateEngineStatus() {
+    const dot = document.getElementById('engine-status-dot');
+    const label = document.getElementById('engine-status-label');
+    const customUrl = localStorage.getItem('API_BASE');
+
+    if (customUrl) {
+      if (dot) dot.classList.add('connected');
+      if (label) label.textContent = 'RENDER CLOUD';
+    } else {
+      if (dot) dot.classList.remove('connected');
+      if (label) label.textContent = 'ENGINE';
+    }
   },
 
   showToast(message) {

@@ -309,15 +309,18 @@ def extract_media_info(url: str):
             int((best_audio.get('abr', 128) * 1000 / 8) * duration) if duration else 0
         )
 
-    # Standard desired heights in descending order
-    target_heights = [2160, 1440, 1080, 720, 480, 360]
+    # Comprehensive standard desired heights from maximum 8K/4K down to lowest 144p data saver
+    target_heights = [4320, 2160, 1440, 1080, 720, 480, 360, 240, 144]
     height_labels = {
-        2160: ("4K Ultra HD", "2160p"),
-        1440: ("2K Quad HD", "1440p"),
-        1080: ("Full HD", "1080p"),
-        720: ("HD", "720p"),
-        480: ("SD Standard", "480p"),
-        360: ("Mobile", "360p")
+        4320: ("8K Cinematic Ultra (4320p)", "4320p"),
+        2160: ("4K Ultra HD (2160p 60fps)", "2160p"),
+        1440: ("2K Quad HD (1440p)", "1440p"),
+        1080: ("Full HD (1080p)", "1080p"),
+        720: ("HD Standard (720p)", "720p"),
+        480: ("SD Standard (480p)", "480p"),
+        360: ("Medium (360p)", "360p"),
+        240: ("Low Data (240p)", "240p"),
+        144: ("Data Saver (144p)", "144p")
     }
 
     # Find highest available height in source
@@ -343,13 +346,13 @@ def extract_media_info(url: str):
         'ext': 'mp4'
     }
 
-    # Group video formats by standard resolution tiers
+    # Group video formats across all supported resolution tiers from highest to lowest
+    effective_max = max_source_height or 1080
     for target_h in target_heights:
-        # Include tier if source has video that reaches at least within 5% of target height
-        if max_source_height >= target_h * 0.90:
+        # Include tier if source has video that reaches within reach, or for standard mobile tiers
+        if effective_max >= target_h * 0.88 or target_h <= 360:
             label, res_tag = height_labels[target_h]
-            # Find best format matching this height or closest
-            matching = [f for f in formats if f.get('height') and abs(f['height'] - target_h) <= 80]
+            matching = [f for f in formats if f.get('height') and abs(f['height'] - target_h) <= 70]
             
             calc_size = 0
             format_id = f"bestvideo[height<={target_h}]+bestaudio/best[height<={target_h}]/best"
@@ -361,9 +364,14 @@ def extract_media_info(url: str):
                 )
                 calc_size = vid_size + (best_audio_size if best_f.get('acodec') == 'none' else 0)
             else:
-                # Estimate based on standard bitrates
-                bitrate_kbps = {2160: 16000, 1440: 8000, 1080: 4500, 720: 2200, 480: 1000, 360: 600}.get(target_h, 1500)
+                bitrate_kbps = {4320: 30000, 2160: 16000, 1440: 8000, 1080: 4500, 720: 2200, 480: 1000, 360: 600, 240: 350, 144: 180}.get(target_h, 1000)
                 calc_size = int((bitrate_kbps * 1000 / 8) * duration) if duration else 0
+
+            # Ensure lower resolution tiers are proportionately scaled down from master
+            if max_vid_size > 0 and target_h < effective_max:
+                ratio = max(0.12, min(1.0, target_h / effective_max))
+                scaled = int(max_vid_size * ratio)
+                calc_size = min(calc_size, scaled) if calc_size > 0 else scaled
 
             resolution_map[res_tag] = {
                 'quality': res_tag,
@@ -377,35 +385,25 @@ def extract_media_info(url: str):
 
     # If source didn't report multi-tier heights (common for Instagram Reels, TikTok, Twitter/X)
     if len(resolution_map) <= 1:
-        resolution_map["1080p"] = {
-            'quality': '1080p',
-            'label': 'Full HD (1080p)',
-            'height': 1080,
-            'format_selector': 'bestvideo+bestaudio/best',
-            'size_bytes': max_vid_size or 18_000_000,
-            'size_formatted': format_bytes(max_vid_size) if max_vid_size > 0 else "Source Stream",
-            'ext': 'mp4'
-        }
-        resolution_map["720p"] = {
-            'quality': '720p',
-            'label': 'HD Standard (720p)',
-            'height': 720,
-            'format_selector': 'bestvideo[height<=720]+bestaudio/best[height<=720]/best',
-            'size_bytes': int(max_vid_size * 0.7) if max_vid_size else 12_000_000,
-            'size_formatted': format_bytes(int(max_vid_size * 0.7)) if max_vid_size > 0 else "Optimized Stream",
-            'ext': 'mp4'
-        }
-        resolution_map["480p"] = {
-            'quality': '480p',
-            'label': 'SD Mobile (480p)',
-            'height': 480,
-            'format_selector': 'bestvideo[height<=480]+bestaudio/best[height<=480]/best',
-            'size_bytes': int(max_vid_size * 0.45) if max_vid_size else 7_000_000,
-            'size_formatted': format_bytes(int(max_vid_size * 0.45)) if max_vid_size > 0 else "Mobile Stream",
-            'ext': 'mp4'
-        }
+        for tag, lbl, h, ratio in [
+            ("1080p", "Full HD (1080p)", 1080, 1.0),
+            ("720p", "HD Standard (720p)", 720, 0.7),
+            ("480p", "SD Standard (480p)", 480, 0.45),
+            ("360p", "Medium (360p)", 360, 0.3),
+            ("240p", "Low Data (240p)", 240, 0.2),
+            ("144p", "Data Saver (144p)", 144, 0.12),
+        ]:
+            resolution_map[tag] = {
+                'quality': tag,
+                'label': lbl,
+                'height': h,
+                'format_selector': f'bestvideo[height<={h}]+bestaudio/best[height<={h}]/best' if h < 1080 else 'bestvideo+bestaudio/best',
+                'size_bytes': int((max_vid_size or 18_000_000) * ratio),
+                'size_formatted': format_bytes(int((max_vid_size or 18_000_000) * ratio)),
+                'ext': 'mp4'
+            }
 
-    # Audio options
+    # Audio options across all bitrates
     audio_options = [
         {
             'bitrate': 320,
@@ -427,6 +425,20 @@ def extract_media_info(url: str):
             'quality_tag': '192k',
             'ext': 'mp3',
             'size_formatted': format_bytes(int((192 * 1000 / 8) * duration)) if duration else "~4-6 MB"
+        },
+        {
+            'bitrate': 128,
+            'label': '128 kbps (Standard Mobile MP3)',
+            'quality_tag': '128k',
+            'ext': 'mp3',
+            'size_formatted': format_bytes(int((128 * 1000 / 8) * duration)) if duration else "~3-4 MB"
+        },
+        {
+            'bitrate': 64,
+            'label': '64 kbps (Data Saver MP3)',
+            'quality_tag': '64k',
+            'ext': 'mp3',
+            'size_formatted': format_bytes(int((64 * 1000 / 8) * duration)) if duration else "~1.5-2 MB"
         },
         {
             'bitrate': 0,
