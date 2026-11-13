@@ -11,7 +11,7 @@ from mutagen.easyid3 import EasyID3
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC, error as ID3Error
 
-from backend.config import DOWNLOADS_DIR, TEMP_DIR, FFMPEG_DIR
+from backend.config import BASE_DIR, DOWNLOADS_DIR, TEMP_DIR, FFMPEG_DIR
 
 # Global job tracker for live progress
 active_jobs = {}
@@ -70,6 +70,18 @@ def get_base_ydl_opts(url: str = None):
         try:
             from yt_dlp.networking.impersonate import ImpersonateTarget
             opts['impersonate'] = ImpersonateTarget.from_str('chrome')
+        except Exception:
+            pass
+
+    cookie_file = BASE_DIR / "cookies.txt"
+    if cookie_file.exists():
+        opts['cookiefile'] = str(cookie_file)
+    elif os.environ.get("YOUTUBE_COOKIES"):
+        try:
+            import tempfile
+            c_path = Path(tempfile.gettempdir()) / "yt_cookies.txt"
+            c_path.write_text(os.environ["YOUTUBE_COOKIES"], encoding="utf-8")
+            opts['cookiefile'] = str(c_path)
         except Exception:
             pass
 
