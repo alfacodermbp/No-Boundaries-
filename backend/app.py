@@ -255,6 +255,8 @@ async def search_endpoint(q: str = Query(..., min_length=1, max_length=512)):
     """
     query = q.strip()
     if is_url(query):
+        if not query.startswith(('http://', 'https://')):
+            query = f"https://{query}"
         safe_url = validate_url(query)
         try:
             media_info = extract_media_info(safe_url)

@@ -12,7 +12,20 @@ URL_REGEX = re.compile(
 )
 
 def is_url(text: str) -> bool:
-    return bool(URL_REGEX.match(text.strip()))
+    clean = text.strip()
+    if clean.startswith(('http://', 'https://')):
+        return True
+    lower = clean.lower()
+    known_domains = [
+        'youtube.com', 'youtu.be', 'music.youtube.com',
+        'spotify.com', 'soundcloud.com', 'instagram.com',
+        'tiktok.com', 'twitter.com', 'x.com', 'snapchat.com',
+        'jiosaavn.com', 'gaana.com', 'reddit.com', 'vimeo.com',
+        'facebook.com', 'fb.watch'
+    ]
+    if any(d in lower for d in known_domains):
+        return True
+    return bool(URL_REGEX.match(clean))
 
 def format_views(view_count):
     if not view_count:

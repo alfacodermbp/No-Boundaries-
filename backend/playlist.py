@@ -187,7 +187,7 @@ def run_batch_playlist_download(job_id: str, playlist_title: str, selected_track
             sub_job_id = f"sub_{job_id}_{idx}"
             sub_template = str(batch_temp_dir / f"{clean_track_title}.%(ext)s")
 
-            opts = get_base_ydl_opts(url)
+            opts = get_base_ydl_opts(sub_url)
             opts.update({
                 'format': 'bestaudio/best',
                 'outtmpl': sub_template,
@@ -195,7 +195,14 @@ def run_batch_playlist_download(job_id: str, playlist_title: str, selected_track
             })
 
             if FFMPEG_DIR:
-                bitrate = '320' if quality_tag == '320k' else ('256' if quality_tag == '256k' else '192')
+                bitrate_map = {
+                    '320k': '320',
+                    '256k': '256',
+                    '192k': '192',
+                    '128k': '128',
+                    '64k': '64',
+                }
+                bitrate = bitrate_map.get(quality_tag, '320')
                 opts['postprocessors'] = [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',

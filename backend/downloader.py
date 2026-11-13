@@ -773,6 +773,7 @@ def run_download_audio(job_id: str, url: str, quality_tag: str, title: str, arti
         clean_title = sanitize_filename(title)
         out_template = str(TEMP_DIR / f"{job_id}_{clean_title}.%(ext)s")
 
+        target_url = url
         opts = get_base_ydl_opts(target_url)
         opts.update({
             'format': 'bestaudio/best',
@@ -781,7 +782,14 @@ def run_download_audio(job_id: str, url: str, quality_tag: str, title: str, arti
         })
 
         if FFMPEG_DIR:
-            bitrate = '320' if quality_tag == '320k' else ('256' if quality_tag == '256k' else '192')
+            bitrate_map = {
+                '320k': '320',
+                '256k': '256',
+                '192k': '192',
+                '128k': '128',
+                '64k': '64',
+            }
+            bitrate = bitrate_map.get(quality_tag, '320')
             if quality_tag == 'original':
                 opts['postprocessors'] = [{
                     'key': 'FFmpegExtractAudio',
