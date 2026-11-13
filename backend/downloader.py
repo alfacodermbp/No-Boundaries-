@@ -4,6 +4,7 @@ import uuid
 import time
 import shutil
 import urllib.request
+import requests
 from pathlib import Path
 import yt_dlp
 from mutagen.easyid3 import EasyID3
@@ -47,7 +48,6 @@ def get_base_ydl_opts(url: str = None):
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
-        'remote_components': ['ejs:github'],
     }
 
     if is_youtube:
@@ -202,6 +202,84 @@ def extract_snapchat_media(url: str):
         'audio_formats': audio_options
     }
 
+def extract_spotify_media(url: str):
+    """
+    Extracts Spotify track metadata via public oEmbed and matches the master audio track via YouTube.
+    """
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    title, artist, thumb = "Spotify Track", "", ""
+    try:
+        oembed_url = f"https://open.spotify.com/oembed?url={url}"
+        resp = requests.get(oembed_url, headers=headers, timeout=6)
+        if resp.status_code == 200:
+            data = resp.json()
+            title = data.get("title") or "Spotify Track"
+            artist = data.get("author_name") or ""
+            thumb = data.get("thumbnail_url") or ""
+    except Exception:
+        pass
+
+    query = f"{title} {artist}".strip() or "spotify music"
+    search_term = f"ytsearch1:{query} audio"
+    opts = get_base_ydl_opts("https://www.youtube.com")
+    opts.update({'skip_download': True, 'socket_timeout': 8})
+
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        res = ydl.extract_info(search_term, download=False)
+        entries = res.get('entries', []) if res else []
+        if not entries:
+            raise ValueError(f"Could not find matching audio for Spotify track: {title}")
+        entry = entries[0]
+        target_url = entry.get('webpage_url') or f"https://www.youtube.com/watch?v={entry.get('id')}"
+        media_info = extract_media_info(target_url)
+        if title:
+            media_info['title'] = f"{title} - {artist}" if artist else title
+        if thumb:
+            media_info['thumbnail'] = thumb
+        media_info['extractor'] = 'Spotify'
+        return media_info
+
+def extract_indian_music_media(url: str):
+    """
+    Extracts JioSaavn & Gaana track titles and matches the master audio track.
+    """
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    title = ""
+    try:
+        match = re.search(r'/(?:song|album)/([^/?#]+)', url)
+        if match:
+            slug = match.group(1).replace('-', ' ')
+            title = re.sub(r'/[^/]+$', '', slug).strip()
+    except Exception:
+        pass
+
+    if not title:
+        try:
+            r = requests.get(url, headers=headers, timeout=5)
+            match = re.search(r'<title>([^<]+)</title>', r.text)
+            if match:
+                title = match.group(1).split('|')[0].split('-')[0].strip()
+        except Exception:
+            pass
+
+    query = title or "indian music"
+    search_term = f"ytsearch1:{query} song"
+    opts = get_base_ydl_opts("https://www.youtube.com")
+    opts.update({'skip_download': True, 'socket_timeout': 8})
+
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        res = ydl.extract_info(search_term, download=False)
+        entries = res.get('entries', []) if res else []
+        if not entries:
+            raise ValueError(f"Could not find matching audio for track: {title}")
+        entry = entries[0]
+        target_url = entry.get('webpage_url') or f"https://www.youtube.com/watch?v={entry.get('id')}"
+        media_info = extract_media_info(target_url)
+        if title:
+            media_info['title'] = title
+        media_info['extractor'] = 'JioSaavn' if 'jiosaavn' in url.lower() else 'Gaana'
+        return media_info
+
 def extract_media_info(url: str):
     """
     Extracts comprehensive metadata, video format options (4k, 1080p, 720p, etc.),
@@ -210,6 +288,20 @@ def extract_media_info(url: str):
     # Normalize YouTube Music to standard YouTube watch endpoint for 100% reliable mobile extraction
     if 'music.youtube.com' in url.lower():
         url = url.replace('music.youtube.com', 'www.youtube.com')
+
+    # Special route: Spotify
+    if 'spotify.com' in url.lower():
+        try:
+            return extract_spotify_media(url)
+        except Exception:
+            pass
+
+    # Special route: JioSaavn & Gaana
+    if 'jiosaavn.com' in url.lower() or 'gaana.com' in url.lower():
+        try:
+            return extract_indian_music_media(url)
+        except Exception:
+            pass
 
     # Special route: Snapchat Spotlight & Stories
     if 'snapchat.com' in url.lower():
@@ -242,9 +334,9 @@ def extract_media_info(url: str):
             opts.update({
                 'skip_download': True,
                 'extract_flat': False,
-                'socket_timeout': 15,
-                'retries': 3,
-                'extractor_retries': 3,
+                'socket_timeout': 8,
+                'retries': 1,
+                'extractor_retries': 1,
             })
 
             if is_youtube:
@@ -280,7 +372,7 @@ def extract_media_info(url: str):
             fallback_opts.update({
                 'skip_download': True,
                 'extract_flat': 'in_playlist',
-                'socket_timeout': 15,
+                'socket_timeout': 8,
             })
             if is_youtube:
                 fallback_opts.pop('impersonate', None)

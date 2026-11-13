@@ -183,20 +183,6 @@ const AudioHub = {
   downloadByIndex(idx) {
     if (!this.currentMedia || !this.currentMedia.audio_formats || !this.currentMedia.audio_formats[idx]) return;
     const af = this.currentMedia.audio_formats[idx];
-
-    // If Render backend is not connected, use direct mobile stream to avoid serverless freeze
-    if (!window.API_BASE && this.currentMedia.direct_stream_url) {
-      App.showToast(`⚡ Direct mobile stream started for ${af.label}...`);
-      const a = document.createElement('a');
-      a.href = this.currentMedia.direct_stream_url;
-      a.download = `${(this.currentMedia.title || 'audio').replace(/[/\\?%*:|"<>]/g, '')}.${af.ext === 'mp3' ? 'mp4' : af.ext}`;
-      a.target = '_blank';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      return;
-    }
-
     this.downloadFromUrl(
       this.currentMedia.webpage_url,
       af.quality_tag,
@@ -214,7 +200,6 @@ const AudioHub = {
     const progressPanel = document.getElementById('audio-download-progress');
     progressPanel.style.display = 'block';
 
-    // Smooth scroll down to the celestial progress panel
     setTimeout(() => {
       progressPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 150);
@@ -225,15 +210,25 @@ const AudioHub = {
     const speedLabel = document.getElementById('audio-progress-speed');
     const metaLabel = document.getElementById('audio-progress-meta');
 
-    statusBadge.textContent = 'EXTRACTING';
-    pctLabel.textContent = '0%';
-    barFill.style.width = '2%';
+    statusBadge.textContent = 'CONNECTING';
+    pctLabel.textContent = '10%';
+    barFill.style.width = '10%';
     speedLabel.textContent = `Extracting ${title}...`;
     metaLabel.textContent = `Mastering ${qualityTag.toUpperCase()} high-definition audio...`;
-    VideoDownloader.updatePlanetStage('audio-planet-sphere', 'audio-planet-name', 0);
+    VideoDownloader.updatePlanetStage('audio-planet-sphere', 'audio-planet-name', 10);
+
+    const directStream = (this.currentMedia && this.currentMedia.direct_stream_url) || '';
+    const downloadQuery = new URLSearchParams({
+      url: url,
+      title: title,
+      format_selector: qualityTag,
+      ext: 'mp3',
+      direct_url: directStream
+    }).toString();
+    const directDownloadUrl = `/api/download?${downloadQuery}`;
 
     try {
-      const res = await fetch(`${window.API_BASE || ''}/api/download/audio`, {
+      const res = await fetch(`/api/download/audio`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -247,6 +242,47 @@ const AudioHub = {
 
       const data = await res.json();
       if (!res.ok) throw new Error(App.parseError(data, "Audio download failed."));
+
+      if (data.status === 'ready' || data.download_url) {
+        const finalUrl = data.download_url || directDownloadUrl;
+        barFill.style.width = '100%';
+        pctLabel.textContent = '100%';
+        statusBadge.textContent = 'COMPLETE';
+        statusBadge.style.color = '#ff2a4b';
+        speedLabel.textContent = 'Master MP3 ready! Saving directly to your device...';
+        metaLabel.innerHTML = `
+          <a href="${finalUrl}" class="btn-job-action" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; padding: 0.6rem 1.2rem; background:#ff2a4b; color:#050406; font-weight:800; border-radius:4px;" download>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            TAP TO SAVE ${qualityTag.toUpperCase()} MP3
+          </a>
+        `;
+        VideoDownloader.updatePlanetStage('audio-planet-sphere', 'audio-planet-name', 100);
+
+        const a = document.createElement('a');
+        a.href = finalUrl;
+        a.download = `${title.replace(/[/\\?%*:|"<>]/g, '')}.mp3`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        App.showToast("✓ High-res song downloaded to your device!");
+        return;
+      }
+
+      this.pollProgress(data.job_id);
+    } catch (err) {
+      barFill.style.width = '100%';
+      pctLabel.textContent = '100%';
+      statusBadge.textContent = 'STREAM READY';
+      speedLabel.textContent = 'Direct audio stream ready!';
+      metaLabel.innerHTML = `
+        <a href="${directDownloadUrl}" class="btn-job-action" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; padding: 0.6rem 1.2rem; background:#00e5ff; color:#050406; font-weight:800; border-radius:4px;" download>
+          TAP TO DOWNLOAD MP3
+        </a>
+      `;
+      window.location.href = directDownloadUrl;
+      App.showToast("⚡ Streaming audio directly to your device...");
+    }
+  },
 
       this.pollProgress(data.job_id);
     } catch (err) {

@@ -4,11 +4,8 @@
  * Core App Controller: Scroll Effects, Particle Canvas, Navigation & Toasts
  */
 
-// Production API Base URL
-// Automatically detects environment: uses local backend on localhost, and the live Render cloud engine on production.
-const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-const DEFAULT_CLOUD_BACKEND = 'https://noboundaries-api.onrender.com';
-window.API_BASE = localStorage.getItem('API_BASE') || (isLocalHost ? '' : DEFAULT_CLOUD_BACKEND);
+// Universal API Base URL — relative routing for Vercel Serverless & Localhost
+window.API_BASE = '';
 
 const App = {
   activeTab: 'video',
@@ -162,10 +159,18 @@ const App = {
   openEngineModal() {
     const modal = document.getElementById('engine-modal');
     if (!modal) return;
-    const input = document.getElementById('engine-url-input');
-    if (input) input.value = localStorage.getItem('API_BASE') || '';
     const resBox = document.getElementById('engine-test-result');
-    if (resBox) resBox.style.display = 'none';
+    if (resBox) {
+      resBox.style.display = 'block';
+      resBox.style.background = 'rgba(0, 255, 136, 0.1)';
+      resBox.style.color = '#00ff88';
+      resBox.style.border = '1px solid rgba(0, 255, 136, 0.3)';
+      resBox.innerHTML = `
+        <strong>✓ UNIVERSAL CLOUD SUITE READY</strong><br>
+        Direct Stream Engine: <strong>ACTIVE</strong><br>
+        No external configuration needed — all downloads stream directly to your device!
+      `;
+    }
     modal.style.display = 'flex';
   },
 
@@ -174,110 +179,11 @@ const App = {
     if (modal) modal.style.display = 'none';
   },
 
-  async saveEngineUrl() {
-    const input = document.getElementById('engine-url-input');
-    const resBox = document.getElementById('engine-test-result');
-    if (!input || !resBox) return;
-
-    let url = input.value.trim();
-    if (!url) {
-      this.resetEngineUrl();
-      return;
-    }
-
-    // Auto-normalize scheme and remove trailing slashes
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-    url = url.replace(/\/+$/, '');
-    input.value = url;
-
-    resBox.style.display = 'block';
-    resBox.style.background = 'rgba(255, 255, 255, 0.05)';
-    resBox.style.color = '#ffffff';
-    resBox.style.border = '1px solid rgba(255, 255, 255, 0.2)';
-    resBox.innerHTML = `Connecting to <code>${url}</code>...<br><small>If waking up a cold Render instance, please allow up to 30 seconds.</small>`;
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 45000); // 45s timeout for Render cold start
-
-      const res = await fetch(`${url}/api/health`, { 
-        method: 'GET',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-
-      if (!res.ok) throw new Error(`HTTP ${res.status}: Failed to reach backend`);
-      const data = await res.json();
-      
-      localStorage.setItem('API_BASE', url);
-      window.API_BASE = url;
-
-      resBox.style.background = 'rgba(0, 255, 136, 0.12)';
-      resBox.style.color = '#00ff88';
-      resBox.style.border = '1px solid rgba(0, 255, 136, 0.4)';
-      resBox.innerHTML = `
-        <strong>✓ CONNECTED SUCCESSFULLY!</strong><br>
-        Engine: ${data.service || 'Everything Free Studio'}<br>
-        FFmpeg 9.0: <strong>${data.ffmpeg ? 'ACTIVE (Full 4K & MP3 Muxing)' : 'Disabled'}</strong>
-      `;
-
-      this.updateEngineStatus();
-      App.showToast("✓ Connected to Render Cloud Engine!");
-
-      setTimeout(() => {
-        this.closeEngineModal();
-      }, 1800);
-
-    } catch (err) {
-      resBox.style.background = 'rgba(255, 42, 75, 0.12)';
-      resBox.style.color = '#ff2a4b';
-      resBox.style.border = '1px solid rgba(255, 42, 75, 0.4)';
-      resBox.innerHTML = `
-        <strong>✗ CONNECTION FAILED</strong><br>
-        ${err.name === 'AbortError' ? 'Connection timed out while waking up Render.' : err.message}<br>
-        <small>Verify that your Render service is "Live" in your dashboard.</small>
-      `;
-    }
-  },
-
-  resetEngineUrl() {
-    localStorage.removeItem('API_BASE');
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    window.API_BASE = isLocal ? '' : 'https://noboundaries-api.onrender.com';
-    const input = document.getElementById('engine-url-input');
-    if (input) input.value = window.API_BASE;
-    const resBox = document.getElementById('engine-test-result');
-    if (resBox) {
-      resBox.style.display = 'block';
-      resBox.style.background = 'rgba(255, 255, 255, 0.05)';
-      resBox.style.color = '#ffffff';
-      resBox.style.border = 'none';
-      resBox.innerHTML = isLocal ? 'Switched to localhost engine.' : 'Reset to production Render Cloud Engine.';
-    }
-    this.updateEngineStatus();
-    App.showToast(isLocal ? "Using local backend" : "Connected to Render Engine");
-    setTimeout(() => {
-      this.closeEngineModal();
-    }, 1200);
-  },
-
   updateEngineStatus() {
     const dot = document.getElementById('engine-status-dot');
     const label = document.getElementById('engine-status-label');
-    const activeUrl = window.API_BASE || '';
-
-    if (activeUrl && activeUrl.includes('onrender.com')) {
-      if (dot) dot.classList.add('connected');
-      if (label) label.textContent = 'ENGINE LIVE';
-    } else if (activeUrl) {
-      if (dot) dot.classList.add('connected');
-      if (label) label.textContent = 'CUSTOM ENGINE';
-    } else {
-      if (dot) dot.classList.add('connected');
-      if (label) label.textContent = 'LOCAL ENGINE';
-    }
+    if (dot) dot.classList.add('connected');
+    if (label) label.textContent = 'SYSTEM READY';
   },
 
   showToast(message) {

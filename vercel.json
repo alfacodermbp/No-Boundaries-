@@ -18,7 +18,13 @@
       ]
     }
   ],
+  "functions": {
+    "api/index.py": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://noboundaries-api.onrender.com/api/$1" }
+    { "source": "/api/(.*)", "destination": "/api/index.py" }
   ]
 }

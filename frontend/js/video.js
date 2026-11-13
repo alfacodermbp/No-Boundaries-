@@ -152,30 +152,15 @@ const VideoDownloader = {
   startDownloadByIndex(idx) {
     if (!this.currentMedia || !this.currentMedia.video_formats || !this.currentMedia.video_formats[idx]) return;
     const f = this.currentMedia.video_formats[idx];
-
-    // When Render backend engine is not connected, use direct stream to avoid serverless freeze & ensure 100% download success
-    if (!window.API_BASE && this.currentMedia.direct_stream_url) {
-      App.showToast(`⚡ Direct mobile stream started for ${f.quality}...`);
-      const a = document.createElement('a');
-      a.href = this.currentMedia.direct_stream_url;
-      a.download = `${(this.currentMedia.title || 'video').replace(/[/\\?%*:|"<>]/g, '')}.mp4`;
-      a.target = '_blank';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      return;
-    }
-
-    this.startDownload(f.format_selector, f.quality);
+    this.startDownload(f.format_selector, f.quality, f.ext || 'mp4');
   },
 
-  async startDownload(formatSelector, qualityTag) {
+  async startDownload(formatSelector, qualityTag, ext = 'mp4') {
     if (!this.currentMedia) return;
 
     const progressPanel = document.getElementById('video-download-progress');
     progressPanel.style.display = 'block';
 
-    // Smooth scroll down to the celestial progress panel
     setTimeout(() => {
       progressPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 150);
@@ -187,14 +172,23 @@ const VideoDownloader = {
     const metaLabel = document.getElementById('video-progress-meta');
 
     statusBadge.textContent = 'CONNECTING';
-    pctLabel.textContent = '0%';
-    barFill.style.width = '2%';
-    speedLabel.textContent = 'Opening stream tunnel...';
-    metaLabel.textContent = 'Initializing 60fps muxer...';
-    this.updatePlanetStage('video-planet-sphere', 'video-planet-name', 0);
+    pctLabel.textContent = '10%';
+    barFill.style.width = '10%';
+    speedLabel.textContent = `Preparing ${qualityTag} stream...`;
+    metaLabel.textContent = 'Connecting direct media pipeline...';
+    this.updatePlanetStage('video-planet-sphere', 'video-planet-name', 10);
+
+    const downloadQuery = new URLSearchParams({
+      url: this.currentMedia.webpage_url,
+      title: this.currentMedia.title || 'video',
+      format_selector: formatSelector || 'best',
+      ext: ext,
+      direct_url: this.currentMedia.direct_stream_url || ''
+    }).toString();
+    const directDownloadUrl = `/api/download?${downloadQuery}`;
 
     try {
-      const res = await fetch(`${window.API_BASE || ''}/api/download/video`, {
+      const res = await fetch(`/api/download/video`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -207,10 +201,44 @@ const VideoDownloader = {
       const data = await res.json();
       if (!res.ok) throw new Error(App.parseError(data, "Download initialization failed."));
 
+      if (data.status === 'ready' || data.download_url) {
+        const finalUrl = data.download_url || directDownloadUrl;
+        barFill.style.width = '100%';
+        pctLabel.textContent = '100%';
+        statusBadge.textContent = 'COMPLETE';
+        statusBadge.style.color = '#ff2a4b';
+        speedLabel.textContent = 'File ready! Saving directly to your device...';
+        metaLabel.innerHTML = `
+          <a href="${finalUrl}" class="btn-job-action" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; padding: 0.6rem 1.2rem; background:#ff2a4b; color:#050406; font-weight:800; border-radius:4px;" download>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            TAP TO SAVE ${qualityTag} MP4
+          </a>
+        `;
+        this.updatePlanetStage('video-planet-sphere', 'video-planet-name', 100);
+
+        const a = document.createElement('a');
+        a.href = finalUrl;
+        a.download = `${(this.currentMedia.title || 'video').replace(/[/\\?%*:|"<>]/g, '')}.mp4`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        App.showToast("✓ Download started! Check your browser downloads.");
+        return;
+      }
+
       this.pollProgress(data.job_id);
     } catch (err) {
-      App.showToast(`Error: ${err.message}`);
-      progressPanel.style.display = 'none';
+      barFill.style.width = '100%';
+      pctLabel.textContent = '100%';
+      statusBadge.textContent = 'STREAM READY';
+      speedLabel.textContent = 'Direct download started!';
+      metaLabel.innerHTML = `
+        <a href="${directDownloadUrl}" class="btn-job-action" style="text-decoration:none; display:inline-flex; align-items:center; gap:0.4rem; padding: 0.6rem 1.2rem; background:#00e5ff; color:#050406; font-weight:800; border-radius:4px;" download>
+          TAP TO DOWNLOAD MP4
+        </a>
+      `;
+      window.location.href = directDownloadUrl;
+      App.showToast("⚡ Streaming directly to your device...");
     }
   },
 

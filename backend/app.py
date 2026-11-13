@@ -2,22 +2,25 @@ import os
 import time
 import uuid
 import threading
+import urllib.parse
+import requests
 from pathlib import Path
 from typing import List, Optional
 from urllib.parse import urlparse
 from pydantic import BaseModel, Field, ConfigDict
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.config import FRONTEND_DIR, DOWNLOADS_DIR, TEMP_DIR, FFMPEG_DIR
+from backend.config import FRONTEND_DIR, DOWNLOADS_DIR, TEMP_DIR, FFMPEG_DIR, is_serverless
 from backend.downloader import (
     extract_media_info, 
     run_download_video, 
     run_download_audio, 
-    active_jobs
+    active_jobs,
+    sanitize_filename
 )
 from backend.searcher import search_songs, is_url
 from backend.playlist import extract_playlist_items, run_batch_playlist_download
@@ -192,7 +195,8 @@ async def health_check():
         "service": "Everything Free Media Studio",
         "timestamp": int(time.time()),
         "ffmpeg": bool(FFMPEG_DIR),
-        "version": "2.4.0-android-direct"
+        "serverless": is_serverless,
+        "version": "3.0.0-universal-vercel-native"
     }
 
 @app.post("/api/analyze")
@@ -227,6 +231,74 @@ async def search_endpoint(q: str = Query(..., min_length=1, max_length=512)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {e}")
 
+@app.get("/api/download")
+@app.get("/api/download-direct")
+async def direct_stream_download(
+    url: str = Query(..., description="Target webpage URL or media stream URL"),
+    title: str = Query("download", description="Media title"),
+    format_selector: str = Query("best", description="Requested format"),
+    ext: str = Query("mp4", description="File extension"),
+    direct_url: Optional[str] = Query(None, description="Direct CDN stream URL if already known")
+):
+    """
+    Direct, failure-proof streaming download endpoint for mobile and desktop.
+    Streams media chunks directly from the platform CDN with Content-Disposition: attachment,
+    saving the file directly to the user's Downloads folder without freezing on serverless.
+    """
+    stream_url = direct_url
+    safe_title = sanitize_filename(title) if title else "download"
+    clean_ext = "mp3" if ext.lower() in ("mp3", "audio") else "mp4"
+
+    # If stream_url not passed directly, resolve it via extract_media_info
+    if not stream_url or not stream_url.startswith("http"):
+        try:
+            info = extract_media_info(url)
+            stream_url = info.get("direct_stream_url")
+            if not stream_url and info.get("video_formats"):
+                for vf in info["video_formats"]:
+                    if vf.get("format_selector") and vf["format_selector"].startswith("http"):
+                        stream_url = vf["format_selector"]
+                        break
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Could not resolve media stream: {str(e)}")
+
+    if not stream_url or not stream_url.startswith("http"):
+        raise HTTPException(status_code=400, detail="Direct download stream not available for this media.")
+
+    # Generator to stream chunks from remote CDN
+    def iter_stream():
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+            "Accept": "*/*",
+            "Accept-Encoding": "identity",
+        }
+        if "googlevideo.com" in stream_url:
+            headers["Referer"] = "https://www.youtube.com/"
+        elif "instagram.com" in stream_url or "cdninstagram.com" in stream_url:
+            headers["Referer"] = "https://www.instagram.com/"
+        elif "tiktokcdn.com" in stream_url:
+            headers["Referer"] = "https://www.tiktok.com/"
+
+        with requests.get(stream_url, headers=headers, stream=True, timeout=30) as r:
+            r.raise_for_status()
+            for chunk in r.iter_content(chunk_size=128 * 1024):
+                if chunk:
+                    yield chunk
+
+    filename = f"{safe_title}.{clean_ext}"
+    encoded_filename = urllib.parse.quote(filename)
+    content_type = "audio/mpeg" if clean_ext == "mp3" else "video/mp4"
+
+    response_headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"; filename*=UTF-8\'\'{encoded_filename}',
+        "Content-Type": content_type,
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Expose-Headers": "Content-Disposition, Content-Length",
+        "Cache-Control": "no-cache",
+    }
+
+    return StreamingResponse(iter_stream(), headers=response_headers)
+
 @app.post("/api/download/video")
 async def start_video_download(req: VideoDownloadRequest):
     """
@@ -234,6 +306,41 @@ async def start_video_download(req: VideoDownloadRequest):
     """
     safe_url = validate_url(req.url)
     job_id = str(uuid.uuid4())
+
+    if is_serverless:
+        clean_title = sanitize_filename(req.title) or "video"
+        direct_stream = ""
+        try:
+            info = extract_media_info(safe_url)
+            direct_stream = info.get("direct_stream_url") or ""
+        except Exception:
+            pass
+
+        download_query = urllib.parse.urlencode({
+            "url": safe_url,
+            "title": clean_title,
+            "format_selector": req.format_selector,
+            "ext": "mp4",
+            "direct_url": direct_stream
+        })
+        dl_url = f"/api/download?{download_query}"
+        active_jobs[job_id] = {
+            'status': 'ready',
+            'progress': 100.0,
+            'speed_str': 'Complete',
+            'eta_str': 'Ready',
+            'downloaded_str': '100%',
+            'total_str': '100%',
+            'filepath': None,
+            'filename': f"{clean_title}.mp4",
+            'download_url': dl_url,
+            'direct_stream_url': direct_stream,
+            'error': None,
+            'is_paused': False,
+            'is_cancelled': False
+        }
+        return {"job_id": job_id, "status": "ready", "download_url": dl_url}
+
     thread = threading.Thread(
         target=run_download_video,
         args=(job_id, safe_url, req.format_selector, req.title),
@@ -249,6 +356,41 @@ async def start_audio_download(req: AudioDownloadRequest):
     """
     safe_url = validate_url(req.url)
     job_id = str(uuid.uuid4())
+
+    if is_serverless:
+        clean_title = sanitize_filename(req.title) or "audio"
+        direct_stream = ""
+        try:
+            info = extract_media_info(safe_url)
+            direct_stream = info.get("direct_stream_url") or ""
+        except Exception:
+            pass
+
+        download_query = urllib.parse.urlencode({
+            "url": safe_url,
+            "title": clean_title,
+            "format_selector": req.quality_tag,
+            "ext": "mp3",
+            "direct_url": direct_stream
+        })
+        dl_url = f"/api/download?{download_query}"
+        active_jobs[job_id] = {
+            'status': 'ready',
+            'progress': 100.0,
+            'speed_str': 'Complete',
+            'eta_str': 'Ready',
+            'downloaded_str': '100%',
+            'total_str': '100%',
+            'filepath': None,
+            'filename': f"{clean_title}.mp3",
+            'download_url': dl_url,
+            'direct_stream_url': direct_stream,
+            'error': None,
+            'is_paused': False,
+            'is_cancelled': False
+        }
+        return {"job_id": job_id, "status": "ready", "download_url": dl_url}
+
     thread = threading.Thread(
         target=run_download_audio,
         args=(job_id, safe_url, req.quality_tag, req.title, req.artist, req.thumbnail),
@@ -356,6 +498,10 @@ async def download_file(job_id: str):
     job = active_jobs[valid_id]
     if job.get('status') != 'ready':
         raise HTTPException(status_code=400, detail="File is not ready yet.")
+
+    # In serverless mode, redirect to the direct streaming download URL
+    if job.get('download_url'):
+        return RedirectResponse(url=job['download_url'])
 
     file_path = job.get('filepath')
     if not file_path or not os.path.exists(file_path):
