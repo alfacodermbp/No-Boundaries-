@@ -51,10 +51,10 @@ def get_base_ydl_opts(url: str = None):
     }
 
     if is_youtube:
-        # YouTube requests use embedded and mobile web clients to completely bypass datacenter bot challenges
+        # YouTube requests use tv_samsung and web_embedded clients to bypass datacenter bot challenges
         opts['extractor_args'] = {
             'youtube': {
-                'player_client': ['web_embedded', 'mweb', 'tv'],
+                'player_client': ['tv_samsung', 'web_embedded', 'mweb'],
                 'player_skip': ['configs']
             }
         }
@@ -329,10 +329,10 @@ def extract_media_info(url: str):
     # Multi-tier extraction strategies with automated client rotation:
     if is_youtube:
         strategies = [
+            {"client": "tv_samsung,web_embedded"},
             {"client": "web_embedded,mweb"},
             {"client": "tv,mweb"},
-            {"client": "android,web_embedded"},
-            {"client": "ios,mweb"},
+            {"client": "visionos,web_embedded"},
         ]
     else:
         strategies = [
