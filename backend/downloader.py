@@ -51,11 +51,11 @@ def get_base_ydl_opts(url: str = None):
     }
 
     if is_youtube:
-        # YouTube requests use the pure native Android and TV clients to completely bypass datacenter bot challenges
+        # YouTube requests use embedded and mobile web clients to completely bypass datacenter bot challenges
         opts['extractor_args'] = {
             'youtube': {
-                'player_client': ['android', 'tv'],
-                'player_skip': ['webpage', 'configs']
+                'player_client': ['web_embedded', 'mweb', 'tv'],
+                'player_skip': ['configs']
             }
         }
     else:
@@ -317,9 +317,10 @@ def extract_media_info(url: str):
     # Multi-tier extraction strategies with automated client rotation:
     if is_youtube:
         strategies = [
-            {"client": "android"},
-            {"client": "tv"},
-            {"client": "android,tv"},
+            {"client": "web_embedded,mweb"},
+            {"client": "tv,mweb"},
+            {"client": "android,web_embedded"},
+            {"client": "ios,mweb"},
         ]
     else:
         strategies = [
@@ -341,10 +342,11 @@ def extract_media_info(url: str):
 
             if is_youtube:
                 opts.pop('impersonate', None)
+                client_list = [c.strip() for c in strat.get('client', 'web_embedded').split(',') if c.strip()]
                 opts['extractor_args'] = {
                     'youtube': {
-                        'player_client': [strat.get('client', 'android')],
-                        'player_skip': ['webpage', 'configs']
+                        'player_client': client_list,
+                        'player_skip': ['configs']
                     }
                 }
             else:
