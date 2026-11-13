@@ -54,8 +54,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ github.token }}
 
-      - name: Lowercase the repo name and username
-        run: echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+      - name: Lowercase and sanitize the repo name
+        run: |
+          REPO="${GITHUB_REPOSITORY,,}"
+          REPO="${REPO%-}"
+          echo "REPO=${REPO}" >> "${GITHUB_ENV}"
 
       - name: Build and push container image to registry
         uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
@@ -74,8 +77,11 @@ jobs:
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
 
     steps:
-      - name: Lowercase the repo name and username
-        run: echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+      - name: Lowercase and sanitize the repo name
+        run: |
+          REPO="${GITHUB_REPOSITORY,,}"
+          REPO="${REPO%-}"
+          echo "REPO=${REPO}" >> "${GITHUB_ENV}"
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
