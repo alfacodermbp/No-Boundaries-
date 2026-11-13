@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp, Scope, Receive, Send
 
 from backend.config import FRONTEND_DIR, DOWNLOADS_DIR, TEMP_DIR, FFMPEG_DIR, is_serverless
 from backend.downloader import (
@@ -27,10 +28,43 @@ from backend.playlist import extract_playlist_items, run_batch_playlist_download
 
 app = FastAPI(
     title="Everything Free — Universal Media Studio",
-    version="2.5.0",
+    version="3.1.0",
     docs_url=None, # Disable public swagger docs in production for security hardening
     redoc_url=None
 )
+
+# ----------------- VERCEL SERVERLESS PATH REWRITE MIDDLEWARE ----------------- #
+
+class VercelPathMiddleware:
+    """
+    Normalizes Vercel serverless rewritten paths.
+    When Vercel rewrites /api/(.*) to /api/index.py, it stores the original path in
+    x-matched-path or x-forwarded-uri. This middleware restores the real URL path
+    so FastAPI routers match without 404 Not Found errors.
+    """
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] == "http":
+            headers_dict = dict(scope.get("headers", []))
+            matched = headers_dict.get(b"x-matched-path", b"").decode("utf-8", errors="ignore")
+            if not matched:
+                matched = headers_dict.get(b"x-forwarded-uri", b"").decode("utf-8", errors="ignore")
+
+            current_path = scope.get("path", "")
+            if matched:
+                clean_matched = matched.split("?")[0]
+                if clean_matched and current_path in ("/api/index.py", "/index.py", "/api", "/api/"):
+                    scope["path"] = clean_matched
+            elif current_path.startswith("/api/index.py/"):
+                scope["path"] = current_path.replace("/api/index.py/", "/api/")
+            elif current_path.startswith("/index.py/"):
+                scope["path"] = current_path.replace("/index.py/", "/")
+
+        await self.app(scope, receive, send)
+
+app.add_middleware(VercelPathMiddleware)
 
 # ----------------- SECURITY & CORS HARDENING ----------------- #
 
@@ -182,9 +216,10 @@ class PlaylistDownloadRequest(BaseModel):
     selected_tracks: List[SelectedTrack]
     quality_tag: str = Field(default="320k", max_length=64)
 
-# ----------------- API ROUTES ----------------- #
+# ----------------- API ROUTES (DUAL ROUTING FOR VERCEL & LOCALHOST) ----------------- #
 
 @app.get("/healthz")
+@app.get("/health")
 @app.get("/api/health")
 async def health_check():
     """
@@ -196,9 +231,10 @@ async def health_check():
         "timestamp": int(time.time()),
         "ffmpeg": bool(FFMPEG_DIR),
         "serverless": is_serverless,
-        "version": "3.0.0-universal-vercel-native"
+        "version": "3.1.0-universal-vercel-native"
     }
 
+@app.post("/analyze")
 @app.post("/api/analyze")
 async def analyze_url(req: AnalyzeRequest):
     """
@@ -211,6 +247,7 @@ async def analyze_url(req: AnalyzeRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.get("/search")
 @app.get("/api/search")
 async def search_endpoint(q: str = Query(..., min_length=1, max_length=512)):
     """
@@ -231,7 +268,9 @@ async def search_endpoint(q: str = Query(..., min_length=1, max_length=512)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {e}")
 
+@app.get("/download")
 @app.get("/api/download")
+@app.get("/download-direct")
 @app.get("/api/download-direct")
 async def direct_stream_download(
     url: str = Query(..., description="Target webpage URL or media stream URL"),
@@ -299,6 +338,7 @@ async def direct_stream_download(
 
     return StreamingResponse(iter_stream(), headers=response_headers)
 
+@app.post("/download/video")
 @app.post("/api/download/video")
 async def start_video_download(req: VideoDownloadRequest):
     """
@@ -349,6 +389,7 @@ async def start_video_download(req: VideoDownloadRequest):
     thread.start()
     return {"job_id": job_id, "status": "queued"}
 
+@app.post("/download/audio")
 @app.post("/api/download/audio")
 async def start_audio_download(req: AudioDownloadRequest):
     """
@@ -399,6 +440,7 @@ async def start_audio_download(req: AudioDownloadRequest):
     thread.start()
     return {"job_id": job_id, "status": "queued"}
 
+@app.post("/playlist/analyze")
 @app.post("/api/playlist/analyze")
 async def analyze_playlist(req: PlaylistAnalyzeRequest):
     """
@@ -411,6 +453,7 @@ async def analyze_playlist(req: PlaylistAnalyzeRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.post("/playlist/download")
 @app.post("/api/playlist/download")
 async def download_playlist_batch(req: PlaylistDownloadRequest):
     """
@@ -432,6 +475,7 @@ async def download_playlist_batch(req: PlaylistDownloadRequest):
     thread.start()
     return {"job_id": job_id, "status": "queued", "count": len(req.selected_tracks)}
 
+@app.get("/progress/{job_id}")
 @app.get("/api/progress/{job_id}")
 async def get_progress(job_id: str):
     """
@@ -442,6 +486,7 @@ async def get_progress(job_id: str):
         raise HTTPException(status_code=404, detail="Job not found.")
     return active_jobs[valid_id]
 
+@app.post("/job/{job_id}/pause")
 @app.post("/api/job/{job_id}/pause")
 async def pause_job(job_id: str):
     """
@@ -457,6 +502,7 @@ async def pause_job(job_id: str):
         job['speed_str'] = 'Download Paused'
     return {"status": job.get('status', 'paused'), "job_id": valid_id}
 
+@app.post("/job/{job_id}/resume")
 @app.post("/api/job/{job_id}/resume")
 async def resume_job(job_id: str):
     """
@@ -471,6 +517,7 @@ async def resume_job(job_id: str):
     job['speed_str'] = 'Resuming...'
     return {"status": "downloading", "job_id": valid_id}
 
+@app.post("/job/{job_id}/cancel")
 @app.post("/api/job/{job_id}/cancel")
 async def cancel_job(job_id: str):
     """
@@ -486,6 +533,7 @@ async def cancel_job(job_id: str):
     job['speed_str'] = 'Cancelled'
     return {"status": "cancelled", "job_id": valid_id}
 
+@app.get("/download-file/{job_id}")
 @app.get("/api/download-file/{job_id}")
 async def download_file(job_id: str):
     """
@@ -514,19 +562,39 @@ async def download_file(job_id: str):
         filename=filename
     )
 
+@app.get("/system-status")
 @app.get("/api/system-status")
 async def system_status():
     """
     Returns engine status and ffmpeg availability.
     """
     return {
-        "engine": "Everything Free Unified Engine v2.5",
+        "engine": "Everything Free Unified Engine v3.1",
         "ffmpeg_installed": bool(FFMPEG_DIR),
         "ffmpeg_dir": FFMPEG_DIR,
         "max_video_resolution": "4K Ultra HD (2160p 60fps)",
-        "max_audio_bitrate": "320 kbps High-Res MP3",
-        "storage": "Direct-to-Client (Zero Telemetry)"
+        "serverless": is_serverless,
+        "status": "ready"
     }
+
+# ----------------- VERCEL DIRECT SCRIPT ENTRYPOINT FALLBACK ----------------- #
+
+@app.api_route("/api/index.py", methods=["GET", "POST", "OPTIONS"])
+@app.api_route("/index.py", methods=["GET", "POST", "OPTIONS"])
+async def vercel_entrypoint_fallback(request: Request):
+    """
+    Fallback router if Vercel forwards requests directly to the file destination.
+    """
+    if request.method == "GET":
+        return await health_check()
+    elif request.method == "POST":
+        try:
+            body = await request.json()
+            if "url" in body:
+                return await analyze_url(AnalyzeRequest(**body))
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        return {"status": "ok", "message": "Vercel entrypoint active"}
 
 # Mount static frontend directory (supports both frontend/ and public/ deployments)
 PUBLIC_DIR = Path(__file__).resolve().parent.parent / "public"
