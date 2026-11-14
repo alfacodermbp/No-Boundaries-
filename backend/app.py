@@ -290,11 +290,51 @@ async def direct_stream_download(
     safe_title = sanitize_filename(title) if title else "download"
     clean_ext = "mp3" if ext.lower() in ("mp3", "audio") else "mp4"
 
-    # If stream_url not passed directly, resolve it via extract_media_info
+    # For Audio requests: Transcode or serve genuine 320kbps MP3 with 100% sound
+    if clean_ext == "mp3":
+        # Check cache
+        candidates = list(DOWNLOADS_DIR.glob(f"*_{safe_title}.mp3")) + list(DOWNLOADS_DIR.glob(f"{safe_title}.mp3"))
+        for c in candidates:
+            if c.exists() and c.stat().st_size > 10000:
+                return FileResponse(
+                    path=str(c),
+                    filename=f"{safe_title}.mp3",
+                    media_type="audio/mpeg",
+                    headers={
+                        "Content-Disposition": f'attachment; filename="{safe_title}.mp3"; filename*=UTF-8\'\'{urllib.parse.quote(safe_title + ".mp3")}',
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Expose-Headers": "Content-Disposition, Content-Length"
+                    }
+                )
+
+        # Download with yt-dlp to generate clean, tagged MP3
+        job_id = f"aud_{uuid.uuid4().hex[:8]}"
+        try:
+            run_download_audio(job_id, url, format_selector or "320k", safe_title)
+            job = active_jobs.get(job_id, {})
+            if job.get('status') == 'ready' and job.get('filepath') and Path(job['filepath']).exists():
+                out_path = Path(job['filepath'])
+                return FileResponse(
+                    path=str(out_path),
+                    filename=f"{safe_title}.mp3",
+                    media_type="audio/mpeg",
+                    headers={
+                        "Content-Disposition": f'attachment; filename="{safe_title}.mp3"; filename*=UTF-8\'\'{urllib.parse.quote(safe_title + ".mp3")}',
+                        "Access-Control-Allow-Origin": "*",
+                        "Access-Control-Expose-Headers": "Content-Disposition, Content-Length"
+                    }
+                )
+        except Exception as dl_err:
+            print(f"Fast yt-dlp audio transcode fallback: {dl_err}")
+
+    # Fallback to direct stream proxy
     if not stream_url or not stream_url.startswith("http"):
         try:
             info = extract_media_info(url)
-            stream_url = info.get("direct_stream_url")
+            if clean_ext == "mp3":
+                stream_url = info.get("direct_audio_url") or info.get("direct_stream_url")
+            else:
+                stream_url = info.get("direct_stream_url")
             if not stream_url and info.get("video_formats"):
                 for vf in info["video_formats"]:
                     if vf.get("format_selector") and vf["format_selector"].startswith("http"):
@@ -320,11 +360,14 @@ async def direct_stream_download(
         elif "tiktokcdn.com" in stream_url:
             headers["Referer"] = "https://www.tiktok.com/"
 
-        with requests.get(stream_url, headers=headers, stream=True, timeout=30) as r:
-            r.raise_for_status()
-            for chunk in r.iter_content(chunk_size=128 * 1024):
-                if chunk:
-                    yield chunk
+        try:
+            with requests.get(stream_url, headers=headers, stream=True, timeout=30) as r:
+                r.raise_for_status()
+                for chunk in r.iter_content(chunk_size=128 * 1024):
+                    if chunk:
+                        yield chunk
+        except Exception as stream_err:
+            print(f"Direct stream chunk error: {stream_err}")
 
     filename = f"{safe_title}.{clean_ext}"
     encoded_filename = urllib.parse.quote(filename)

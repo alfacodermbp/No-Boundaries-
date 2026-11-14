@@ -593,6 +593,24 @@ def extract_media_info(url: str):
             if any_url:
                 direct_stream = any_url[-1].get('url')
 
+    # Locate pure audio stream (M4A / WebM Opus with 100% sound)
+    direct_audio = None
+    all_formats = info.get('formats', [])
+    pure_audio_fmts = [
+        f for f in all_formats
+        if f.get('url') and f.get('acodec') != 'none' and f.get('vcodec') == 'none'
+    ]
+    if pure_audio_fmts:
+        m4as = [f for f in pure_audio_fmts if f.get('ext') == 'm4a']
+        if m4as:
+            direct_audio = max(m4as, key=lambda x: (x.get('abr') or 0)).get('url')
+        else:
+            direct_audio = max(pure_audio_fmts, key=lambda x: (x.get('abr') or 0)).get('url')
+    elif all_formats:
+        any_audio = [f for f in all_formats if f.get('url') and f.get('acodec') != 'none']
+        if any_audio:
+            direct_audio = max(any_audio, key=lambda x: (x.get('abr') or 0)).get('url')
+
     return {
         'is_playlist': False,
         'id': info.get('id', str(uuid.uuid4())[:8]),
@@ -604,6 +622,8 @@ def extract_media_info(url: str):
         'extractor': extractor,
         'webpage_url': info.get('webpage_url', url),
         'direct_stream_url': direct_stream,
+        'direct_audio_url': direct_audio or direct_stream,
+        'audio_stream_url': direct_audio or direct_stream,
         'video_formats': list(resolution_map.values()),
         'audio_formats': audio_options
     }

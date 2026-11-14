@@ -381,30 +381,100 @@
           <div id="playlist-curator" style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--neon-green);">Curated Collection</div>
         </div>
 
-        <!-- Interactive Playlist Toolbar -->
+        <!-- Interactive Playlist Selection & Download Toolbar -->
         <div class="playlist-toolbar">
-          <div class="playlist-select-actions">
-            <button class="btn-tool" onclick="PlaylistStudio.selectAll()">✓ SELECT ALL</button>
-            <button class="btn-tool" onclick="PlaylistStudio.deselectAll()">✕ DESELECT ALL</button>
-            <button class="btn-tool" onclick="PlaylistStudio.selectFirst(25)">FIRST 25</button>
-            <button class="btn-tool" onclick="PlaylistStudio.selectFirst(50)">FIRST 50</button>
-            <div class="playlist-counter">
-              SELECTED: <span id="playlist-selected-count">0</span> / <span id="playlist-total-count">0</span> TRACKS
-              (<span id="playlist-est-size">~0 MB</span>)
+          <!-- Selection Controls Row -->
+          <div class="playlist-controls-row">
+            <div class="playlist-quick-pills">
+              <span class="control-label">QUICK:</span>
+              <button class="btn-tool" onclick="PlaylistStudio.selectAll()">✓ ALL</button>
+              <button class="btn-tool" onclick="PlaylistStudio.deselectAll()">✕ CLEAR</button>
+              <button class="btn-tool btn-tool-gold" onclick="PlaylistStudio.selectLast(50)" title="Select last 50 songs from end">★ LAST 50</button>
+              <button class="btn-tool btn-tool-gold" onclick="PlaylistStudio.selectLast(100)" title="Select last 100 songs from end">★ LAST 100</button>
+              <button class="btn-tool btn-tool-gold" onclick="PlaylistStudio.selectLast(200)" title="Select last 200 songs from end">★ LAST 200</button>
+            </div>
+
+            <!-- Smart Dropdown for Selecting/Deselecting from End or Start -->
+            <div class="playlist-dropdown-wrap">
+              <label class="control-sublabel" for="playlist-range-select">RANGE:</label>
+              <select id="playlist-range-select" class="quality-select" onchange="PlaylistStudio.handleRangeSelect(this.value)">
+                <option value="">-- Select / Deselect Range --</option>
+                <option value="all">✓ Select All Tracks</option>
+                <option value="select_last_25">★ Select Last 25 Songs (Newest from End)</option>
+                <option value="select_last_50">★ Select Last 50 Songs (Newest from End)</option>
+                <option value="select_last_100">★ Select Last 100 Songs (Newest from End)</option>
+                <option value="select_last_200">★ Select Last 200 Songs (Newest from End)</option>
+                <option value="select_last_300">★ Select Last 300 Songs (Newest from End)</option>
+                <option value="deselect_last_50">✕ Deselect Last 50 Songs (from End)</option>
+                <option value="deselect_last_100">✕ Deselect Last 100 Songs (from End)</option>
+                <option value="deselect_last_200">✕ Deselect Last 200 Songs (from End)</option>
+                <option value="select_first_50">Select First 50 Songs (Oldest from Top)</option>
+                <option value="select_first_100">Select First 100 Songs (Oldest from Top)</option>
+                <option value="deselect_first_50">✕ Deselect First 50 Songs (from Top)</option>
+                <option value="deselect_first_100">✕ Deselect First 100 Songs (from Top)</option>
+                <option value="clear">✕ Clear All Selections</option>
+              </select>
+            </div>
+
+            <!-- Custom Count Controls -->
+            <div class="playlist-custom-count-wrap">
+              <span class="control-sublabel">CUSTOM:</span>
+              <div class="custom-count-box">
+                <input type="number" id="playlist-custom-num" class="custom-num-input" value="50" min="1" max="1000">
+                <button class="btn-tool-sm btn-tool-gold" onclick="PlaylistStudio.applyCustomCount('select_last')" title="Select Last N Songs from end">+ Last N</button>
+                <button class="btn-tool-sm" onclick="PlaylistStudio.applyCustomCount('deselect_last')" title="Deselect Last N Songs from end">- Last N</button>
+                <button class="btn-tool-sm" onclick="PlaylistStudio.applyCustomCount('select_first')" title="Select First N Songs from top">+ First N</button>
+                <button class="btn-tool-sm" onclick="PlaylistStudio.applyCustomCount('deselect_first')" title="Deselect First N Songs from top">- First N</button>
+              </div>
             </div>
           </div>
 
-          <div class="playlist-download-action">
-            <select id="playlist-quality-select" class="quality-select">
-              <option value="320k">320 kbps MP3 (Master)</option>
-              <option value="256k">256 kbps MP3 (Studio)</option>
-              <option value="192k">192 kbps MP3 (Standard)</option>
-              <option value="128k">128 kbps MP3 (Mobile)</option>
-            </select>
-            <button id="btn-download-playlist-batch" class="btn-download-batch" onclick="PlaylistStudio.startBatchDownload()">
-              DOWNLOAD SELECTED (ZIP FOLDER)
-            </button>
+          <!-- Counter & Dual Download Actions Row -->
+          <div class="playlist-actions-row">
+            <div class="playlist-counter-wrap">
+              <div class="playlist-counter">
+                SELECTED: <span id="playlist-selected-count">0</span> / <span id="playlist-total-count">0</span> TRACKS
+                (<span id="playlist-est-size">~0 MB</span>)
+              </div>
+              <div class="auto-skip-toggle-wrap">
+                <label class="auto-skip-label">
+                  <input type="checkbox" id="playlist-auto-skip" checked>
+                  <span>Auto-skip unavailable songs & continue</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="playlist-download-action">
+              <select id="playlist-quality-select" class="quality-select">
+                <option value="320k">320 kbps MP3 (Master)</option>
+                <option value="256k">256 kbps MP3 (Studio)</option>
+                <option value="192k">192 kbps MP3 (Standard)</option>
+                <option value="128k">128 kbps MP3 (Mobile)</option>
+              </select>
+
+              <!-- Line-by-Line Track-by-Track Direct Device Download Button -->
+              <button id="btn-download-line-by-line" class="btn-download-batch btn-neon-green" onclick="PlaylistStudio.startLineByLineDownload()" title="Download individual MP3 files one by one straight to device">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                DOWNLOAD TRACKS (ONE BY ONE TO DEVICE)
+              </button>
+
+              <!-- Compressed ZIP Folder Download Button -->
+              <button id="btn-download-playlist-batch" class="btn-download-batch btn-gold" onclick="PlaylistStudio.startBatchZipDownload()" title="Download all selected tracks as single ZIP folder">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="21 8 21 21 3 21 3 8"></polyline><rect x="1" y="3" width="22" height="5"></rect><line x1="10" y1="12" x2="14" y2="12"></line></svg>
+                DOWNLOAD AS ZIP FOLDER
+              </button>
+            </div>
           </div>
+        </div>
+
+        <!-- Failed & Skipped Tracks Notification Panel with Retry -->
+        <div id="playlist-failed-panel" class="failed-tracks-panel" style="display:none;">
+          <div class="failed-header">
+            <span class="failed-badge">SKIPPED / UNAVAILABLE SONGS (<span id="failed-tracks-count">0</span>)</span>
+            <span class="failed-sub">The remaining songs continued downloading uninterrupted.</span>
+            <button class="btn-tool-sm btn-tool-gold" onclick="PlaylistStudio.retryAllFailed()">↺ RETRY ALL FAILED SONGS</button>
+          </div>
+          <div id="failed-tracks-list" class="failed-tracks-list"></div>
         </div>
 
         <!-- Interactive Tracks List with Checkboxes -->
